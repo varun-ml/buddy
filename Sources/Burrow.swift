@@ -473,7 +473,7 @@ struct BurrowWorkScene: View {
             let (sc, ox, oy) = sceneTransform(geo.size)
             ZStack(alignment: .topLeading) {
                 TimelineView(.animation(minimumInterval: pots.isEmpty ? 60 : 1.0 / 20)) { tl in
-                    let t = tl.date.timeIntervalSinceReferenceDate
+                    let t = (frozenTime ?? tl.date.timeIntervalSinceReferenceDate)
                     Canvas { c, size in
                         c.translateBy(x: ox, y: oy); c.scaleBy(x: sc, y: sc)
                         c.fill(Path(CGRect(x: 0, y: 0, width: 360, height: 150)), with: .color(hex(0xf7e2c6)))

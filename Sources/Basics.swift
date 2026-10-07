@@ -167,6 +167,7 @@ let config: [String: Any] = FileManager.default.contents(atPath: (NSHomeDirector
 var statsRepos = config["statsRepos"] as? [String] ?? []
 /// "cat", "pug", "bear", or "random": cat, pug, bear in turn, one per day.
 var pet: String {
+    if let p = forcedPet { return p }
     let p = config["pet"] as? String ?? "cat"
     guard p == "random" else { return p }
     // read dozens of times per frame; the calendar only needs asking once a minute
@@ -176,6 +177,9 @@ var pet: String {
     return randomDay.pet
 }
 var randomDay = (at: Date.distantPast, pet: "cat")
+/// Test seams for --snapshot: one pet, and a stopped clock so breathing and blinking draw the same every run.
+var forcedPet: String?
+var frozenTime: Double?
 var isBear: Bool { pet == "bear" }
 var isPug: Bool { pet == "pug" }
 /// Sunglasses, tracksuit and sneakers. Pugs wear it unless buddy.json says "outfit": "none".

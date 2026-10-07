@@ -76,7 +76,7 @@ struct Kitten: View {
     var agent = agents.last!
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 10)) { t in
-            let s = t.date.timeIntervalSinceReferenceDate
+            let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             ZStack {
                 Ellipse().fill(breed.fur).frame(width: 26, height: 15).position(x: 15, y: 33)
                 if isBear {

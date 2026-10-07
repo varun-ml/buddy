@@ -71,6 +71,24 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-\(tab).png"))
         }
     } } }
+    frozenTime = 800_000_000
+    MainActor.assumeIsolated { for p in ["cat", "pug", "bear"] {   // every coat of every pet, awake, plus a sleeping one, a kitten and the Burrow scene pet
+        forcedPet = p
+        let models: [Model] = (0..<breeds.count + 1).map { i in
+            let pm = Model(); pm.breedIndex = i % breeds.count
+            if i < breeds.count { pm.sessions = [Session(id: "w", state: "working", ts: now)] }
+            return pm
+        }
+        let row = HStack(spacing: 6) {
+            ForEach(models.indices, id: \.self) { i in Cat(m: models[i]).frame(width: 96, height: 84) }
+            Kitten(breed: breeds[0], asleep: false, agent: agents[0]).frame(width: 30, height: 40)
+            ScenePet(fur: breeds[0].fur, dark: breeds[0].dark).frame(width: 60, height: 50)
+        }.padding(8).background(Color.white).environment(\.colorScheme, .light)
+        let r = ImageRenderer(content: row); r.scale = 2
+        if let img = r.nsImage, let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
+            try? png.write(to: URL(fileURLWithPath: "\(dir)/pet-\(p).png"))
+        }
+    } }
     print("snapshots in \(dir)"); exit(0)
 }
 if CommandLine.arguments.contains("--dump") {

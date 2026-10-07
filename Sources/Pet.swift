@@ -115,7 +115,7 @@ struct Cat: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: m.walking || m.zoomies || m.gesture != .none || m.hovering ? 1.0 / 30 : 1.0)) { t in   // 1 fps when idle: 7.6% → 3% CPU, measured
-            let s = t.date.timeIntervalSinceReferenceDate
+            let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             let asleep = mood == .asleep
             let breathe = 1 + (asleep ? 0.05 : 0.025) * sin(s * (asleep ? 1.4 : 2.4))
             let step = m.walking ? sin(s * 12) : 0
@@ -374,7 +374,7 @@ struct Cat: View {
         } else if m.gesture == .wash {
             TimelineView(.animation) { t in
                 Ellipse().fill(b.points ?? b.fur).overlay(Ellipse().stroke(b.dark, lineWidth: 1))
-                    .frame(width: 10, height: 8).position(x: 61, y: 44 + sin(t.date.timeIntervalSinceReferenceDate * 14) * 2)
+                    .frame(width: 10, height: 8).position(x: 61, y: 44 + sin((frozenTime ?? t.date.timeIntervalSinceReferenceDate) * 14) * 2)
             }
         } else {
             moodMouth
