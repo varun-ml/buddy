@@ -175,6 +175,11 @@ struct PetView: View {
                             Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
                         }
                     }
+                    Menu("Costume") {
+                        ForEach(costumes, id: \.0) { c in
+                            Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
+                        }
+                    }
                     Button("Set goals…") { DispatchQueue.main.async { m.setGoals() } }
                     Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
                     Button("Add task…") { DispatchQueue.main.async { m.addTask() } }
@@ -213,6 +218,8 @@ struct PetView: View {
 
 final class Panel: NSPanel {
     override var canBecomeKey: Bool { false }
+    /// The hero's fly-off leaves the screen; macOS would otherwise stop the window at the top edge. wander() brings Buddy back if it's ever lost.
+    override func constrainFrameRect(_ r: NSRect, to screen: NSScreen?) -> NSRect { r }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -222,6 +229,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let big = NSSize(width: 360, height: 660)
     var target: CGFloat?
     var litter: Panel!
+    var flightFloor: CGFloat?                    // the hero's floor while it flies (Costume.swift)
+    var heroLater: (Gesture, Date)?               // a flight that waits for a bubble or the card to close
     var homeY: CGFloat = 0
     var squatHoldUntil = Date.distantPast
     var forcedSquat = CommandLine.arguments.contains("--squat-now")          // the floor Bit walks on, restored after squatting
@@ -270,6 +279,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.anotherQuote()   // so the wisdom box is never empty
         if let i = CommandLine.arguments.firstIndex(of: "--theme"), i + 1 < CommandLine.arguments.count { T = themes[CommandLine.arguments[i + 1]] ?? T; model.themeName = T.name }
         if CommandLine.arguments.contains("--personal") { model.tab = "personal" }
+        if let i = CommandLine.arguments.firstIndex(of: "--costume"), i + 1 < CommandLine.arguments.count { costume = CommandLine.arguments[i + 1] }   // test: wear it without saving
+        if let i = CommandLine.arguments.firstIndex(of: "--trick"), i + 1 < CommandLine.arguments.count,   // test: --trick flyOff, 6 s after launch
+           let g = Gesture.allCases.first(where: { "\($0)" == CommandLine.arguments[i + 1] }) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 6) { self.model.bubble = nil; self.model.doGesture(g) }
+        }
         if CommandLine.arguments.contains("--card") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 4) { self.model.bubble = nil; self.model.showCard = true; self.model.onExpandChange?() }
         }
@@ -362,6 +376,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let m = model
         // 30 Hz only while walking; 2 Hz otherwise
         tick += 1
+        if heroFlight() { return }
         let moving = m.walking || m.zoomies || target != nil
         if !moving && tick % 15 != 0 { return }
         placeLitter()

@@ -100,7 +100,8 @@ extension Cat {
 
 
 
-enum Gesture: CaseIterable { case none, stretch, yawn, spin, wash, loaf, sneeze, zoomies, knock, hop, shimmy, roar, honey, fish, scratch }
+enum Gesture: CaseIterable { case none, stretch, yawn, spin, wash, loaf, sneeze, zoomies, knock, hop, shimmy, roar, honey, fish, scratch,
+    heroLanding, flyOff, grapple, capeSwirl }   // the last four: the caped hero (Costume.swift)
 
 struct Particle: Identifiable { let id = UUID(); let glyph: String; let dx: CGFloat; var fall = false }
 
@@ -148,19 +149,23 @@ struct Cat: View {
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             let asleep = mood == .asleep
             let breathe = 1 + (asleep ? 0.05 : 0.025) * sin(s * (asleep ? 1.4 : 2.4))
-            let step = m.walking ? sin(s * 12) : 0
+            let g = m.gesture, gt = Date().timeIntervalSince(m.gestureAt)
+            let flying = hero && (g == .flyOff || g == .grapple)
+            let gliding = hero && (m.walking && !m.zoomies || flying)   // the hero glides: feet off the ground, legs tucked
+            let hm = hero ? heroMotion(g, gt) : (y: CGFloat(0), squash: CGFloat(1), tilt: 0.0)
+            let step = m.walking && !gliding ? sin(s * 12) : 0
             let wagSpeed: Double = m.hovering ? 9 : mood == .busy ? 4 : mood == .upset ? 14 : 2
             let wag = asleep ? 0 : sin(s * wagSpeed) * (m.hovering ? 16 : 9)
             let blink = !asleep && Int(s * 10) % 37 == 0
-            let g = m.gesture, gt = Date().timeIntervalSince(m.gestureAt)
             let k = g == .stretch ? sin(min(gt / 2.4, 1) * .pi) : 0
             let loaf = g == .loaf
             ZStack(alignment: .topTrailing) {
                 ZStack {
+                    if hero { cape(s: s, moving: gliding, gt: gt) }
                     tail(wag: wag, asleep: asleep)
                     ForEach(0..<4) { i in
                         let y = asleep ? 64 : 63 + (i % 2 == 0 ? step : -step) * 2
-                        Capsule().fill(drip ? ink : (b.points ?? (i % 2 == 0 ? b.dark : b.fur))).frame(width: petKind.chunky ? 10 : 7, height: asleep || loaf ? 4 : 12)
+                        Capsule().fill(drip ? ink : (b.points ?? (i % 2 == 0 ? b.dark : b.fur))).frame(width: petKind.chunky ? 10 : 7, height: asleep || loaf ? 4 : gliding ? 7 : 12)
                             .position(x: [22, 32, 46, 56][i], y: y)
                         if drip && !asleep && !loaf {   // sneakers
                             Capsule().fill(Color.white).frame(width: 9, height: 4.5).overlay(Capsule().fill(ink).frame(width: 4, height: 1.1))
@@ -179,8 +184,10 @@ struct Cat: View {
                         markings(asleep: asleep)
                         Ellipse().fill(b.belly.opacity(0.85)).frame(width: 26, height: 10).position(x: 46, y: asleep ? 60 : 58)
                     }
+                    if hero && !asleep { emblem() }
                     ZStack {
                         head(s: s, blink: blink, asleep: asleep)
+                        if hero { mask(blink: blink, asleep: asleep) }
                         poseLayer
                     }
                     .rotationEffect(.degrees(m.pose == .thinking ? -9 : 0), anchor: UnitPoint(x: 0.7, y: 0.6))
@@ -198,6 +205,9 @@ struct Cat: View {
                 .rotationEffect(.degrees(g == .roar ? -16 * sin(min(gt / 1.8, 1) * .pi) : 0), anchor: UnitPoint(x: 0.3, y: 1))
                 .offset(x: g == .scratch ? sin(gt * 6) * 2.5 : 0, y: g == .scratch ? -abs(sin(gt * 6)) * 2 : 0)
                 .rotationEffect(.degrees(g == .scratch ? sin(gt * 6) * 4 : 0), anchor: .bottom)
+                .scaleEffect(x: 1 / hm.squash * (hm.squash < 1 ? 0.9 : 1), y: hm.squash, anchor: .bottom)
+                .rotationEffect(.degrees(hm.tilt + (gliding && !flying ? 8 : 0)), anchor: .center)
+                .offset(y: hm.y + (gliding ? -10 + sin(s * 3) * 2 : 0))
                 .scaleEffect(x: m.facingLeft ? -1 : 1, y: 1)
                 accessory(s: s).frame(width: 84, height: 20).offset(y: -22)
                 if m.badge > 0 && !m.snoozed {
@@ -234,6 +244,10 @@ struct Cat: View {
             case .honey: burst(["🍯", "yum"])
             case .fish: DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { burst(["🐟", "💦"]) }
             case .scratch: burst(["scritch"])
+            case .heroLanding: DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { burst(["💨", "💥", "💨"]) }; shakeSoon()
+            case .capeSwirl: burst(["✨"])
+            case .grapple: burst(["🪝"])
+            case .flyOff: burst(["💨"])
             default: break
             }
         }

@@ -159,12 +159,12 @@ final class Model: ObservableObject {
     /// A little bit of business: stretch, yawn, chase tail, wash, loaf, sneeze, zoomies, knock something off, hop.
     /// Bears: rear up and roar, eat honey, swipe a fish out of the air, scratch their back.
     func doGesture(_ g: Gesture? = nil) {
-        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : [])).randomElement()!
+        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : []) + (hero ? [.capeSwirl, .capeSwirl, .grapple] : [])).randomElement()!   // grapple: about 1 trick in 14
         gesture = pick
         gestureAt = Date()
         if pick == .zoomies { zoomies = true }
         if pick == .hop { celebrate += 1 }
-        let dur: Double = pick == .loaf ? 6 : pick == .zoomies || pick == .honey || pick == .scratch ? 3 : 2.4
+        let dur: Double = [.loaf: 6, .zoomies: 3, .honey: 3, .scratch: 3, .heroLanding: 1.5, .flyOff: 3.9, .grapple: 6.1, .capeSwirl: 1.3][pick] ?? 2.4
         DispatchQueue.main.asyncAfter(deadline: .now() + dur) { [weak self] in
             if self?.gesture == pick { self?.gesture = .none; self?.zoomies = false }
         }
@@ -291,8 +291,8 @@ final class Model: ObservableObject {
             if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
             // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
             if kind == .event && tone == .happy { dance() }
-            if kind == .event && tone == .upset, let g = petKind.onRed { doGesture(g) }     // a bear roars at a red PR
-            if kind == .event && tone == .happy, let g = petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
+            if kind == .event && tone == .upset, let g = hero ? .flyOff : petKind.onRed { doGesture(g) }   // the hero flies off to fix it     // a bear roars at a red PR
+            if kind == .event && tone == .happy, let g = hero ? .heroLanding : petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
             if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
             if showCard && tone == .happy { celebrate += 1 }
         }

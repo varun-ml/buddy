@@ -49,7 +49,7 @@ Right-click Buddy → **Theme**.
 | Warm and playful. Your pet walks a little path as you make progress on the week's goal, and a plant grows a leaf for each step of the month. | A frosted macOS widget with big numbers and progress rings. | Dark and precise, for people who live in the terminal. |
 | <img src="docs/burrow.png" width="280"> | <img src="docs/glass.png" width="280"> | <img src="docs/ink.png" width="280"> |
 
-Pick your pet too: **cat**, **pug** or **bear** (`~/buddy/install.sh pug`), or `random` for a different one each day.
+Pick your pet too: **cat**, **pug** or **bear** (`~/buddy/install.sh pug`), or `random` for a different one each day. Right-click → **Costume** → *Caped hero* puts any of them in a cape and mask: it glides instead of walking, does a hero landing when you merge, flies off when a PR breaks, and now and then grapples up to the top of your screen.
 
 ## Everyday use
 
