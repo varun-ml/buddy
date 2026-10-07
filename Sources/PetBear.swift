@@ -7,12 +7,6 @@ let bearPet = PetKind(
     name: "bear", emoji: "🐻", hello: "🐻", coats: bearCoats,
     tricks: [.stretch, .yawn, .loaf, .sneeze, .zoomies, .hop, .roar, .roar, .honey, .fish, .scratch],
     onRed: .roar, onMerge: .fish, chunky: true,
-    tail: { b, wag, _ in AnyView(Circle().fill(b.points ?? b.dark).frame(width: 9, height: 9).position(x: 13, y: 46 + wag * 0.08)) },
-    head: { c, s, blink, asleep, look in AnyView(c.bearHead(s: s, blink: blink, asleep: asleep, look: look)) },
-    kittenEars: { b in AnyView(ZStack {
-        ForEach([7.0, 23.0], id: \.self) { x in Circle().fill(b.points ?? b.fur).frame(width: 8, height: 8).position(x: x, y: 9) }
-    }) },
-    kittenFace: { b in AnyView(Ellipse().fill(b.belly).frame(width: 10, height: 7).position(x: 15, y: 21)) },
     sceneEars: { c, fur, _ in
         c.fill(Path(ellipseIn: CGRect(x: 1, y: -31, width: 6, height: 6)), with: .color(fur))
         c.fill(Path(ellipseIn: CGRect(x: 11, y: -31, width: 6, height: 6)), with: .color(fur))
@@ -26,7 +20,16 @@ let bearCoats: [Breed] = [
     Breed(name: "Panda", fur: rgb(248, 248, 244), dark: rgb(214, 214, 210), belly: .white, points: rgb(28, 28, 30)),
 ]
 
+func bearKittenEars(_ b: Breed) -> some View {
+    ForEach([7.0, 23.0], id: \.self) { x in Circle().fill(b.points ?? b.fur).frame(width: 8, height: 8).position(x: x, y: 9) }
+}
+func bearKittenFace(_ b: Breed) -> some View { Ellipse().fill(b.belly).frame(width: 10, height: 7).position(x: 15, y: 21) }
+
 extension Cat {
+    func bearTail(wag: Double) -> some View {   // a stub
+        Circle().fill(b.points ?? b.dark).frame(width: 9, height: 9).position(x: 13, y: 46 + wag * 0.08)
+    }
+
     /// A bear: round ears, broad head, pale muzzle, big nose. Panda: black ears and eye patches.
     @ViewBuilder func bearHead(s: Double, blink: Bool, asleep: Bool, look: CGSize) -> some View {
         let ear = b.points ?? b.fur

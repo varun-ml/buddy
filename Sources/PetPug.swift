@@ -7,17 +7,6 @@ let pugPet = PetKind(
     name: "pug", emoji: "🐶", hello: "🐶", coats: pugCoats,
     tricks: [.stretch, .yawn, .spin, .wash, .loaf, .sneeze, .zoomies, .knock, .hop],
     outfit: true, dances: true,
-    tail: { b, wag, _ in AnyView(Circle().trim(from: 0, to: 0.8).stroke(b.fur, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-        .frame(width: 11, height: 11).rotationEffect(.degrees(wag * 2)).position(x: 13, y: 40)) },
-    head: { c, s, blink, asleep, look in AnyView(c.pugHead(blink: blink, asleep: asleep, look: look)) },
-    kittenEars: { _ in AnyView(EmptyView()) },
-    kittenFace: { b in AnyView(ZStack {
-        if let mk = b.mask {
-            Tri(a: CGPoint(x: 4, y: 11), b: CGPoint(x: 10, y: 9), c: CGPoint(x: 6, y: 18)).fill(mk)
-            Tri(a: CGPoint(x: 20, y: 9), b: CGPoint(x: 26, y: 11), c: CGPoint(x: 24, y: 18)).fill(mk)
-            Ellipse().fill(mk).frame(width: 11, height: 8).position(x: 15, y: 21)
-        }
-    }) },
     sceneEars: { c, _, dark in
         c.fill(Path(ellipseIn: CGRect(x: 0, y: -28, width: 5, height: 8)), with: .color(dark))
         c.fill(Path(ellipseIn: CGRect(x: 13, y: -28, width: 5, height: 8)), with: .color(dark))
@@ -30,7 +19,20 @@ let pugCoats: [Breed] = [
     Breed(name: "Silver pug", fur: rgb(200, 196, 188), dark: rgb(70, 68, 66), belly: rgb(226, 222, 214), mask: rgb(36, 34, 34)),
 ]
 
+@ViewBuilder func pugKittenFace(_ b: Breed) -> some View {
+    if let mk = b.mask {
+        Tri(a: CGPoint(x: 4, y: 11), b: CGPoint(x: 10, y: 9), c: CGPoint(x: 6, y: 18)).fill(mk)
+        Tri(a: CGPoint(x: 20, y: 9), b: CGPoint(x: 26, y: 11), c: CGPoint(x: 24, y: 18)).fill(mk)
+        Ellipse().fill(mk).frame(width: 11, height: 8).position(x: 15, y: 21)
+    }
+}
+
 extension Cat {
+    func pugTail(wag: Double) -> some View {
+        Circle().trim(from: 0, to: 0.8).stroke(b.fur, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            .frame(width: 11, height: 11).rotationEffect(.degrees(wag * 2)).position(x: 13, y: 40)
+    }
+
     /// A pug: round head, folded black ears, black mask, forehead wrinkles, flat nose.
     @ViewBuilder func pugHead(blink: Bool, asleep: Bool, look: CGSize) -> some View {
         let mask = b.mask ?? ink

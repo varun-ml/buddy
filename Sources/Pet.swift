@@ -44,7 +44,8 @@ struct Breed {
 }
 func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(red: r / 255, green: g / 255, blue: b / 255) }
 
-/// One kind of pet. To add one, copy PetBear.swift (coats, tricks, how it draws) and add it to `pets`.
+/// One kind of pet. To add one, copy PetBear.swift (coats, tricks, how it draws), add it to `pets`,
+/// and add a case to each drawing switch below (head, tail, kitten).
 struct PetKind {
     let name: String              // buddy.json "pet"
     let emoji: String             // on the card's header
@@ -56,16 +57,46 @@ struct PetKind {
     var outfit = false            // wears the tracksuit, sneakers and shades ("outfit": "none" turns it off)
     var dances = false            // plays the dance clip on good news
     var chunky = false            // wider legs and body
-    let tail: (Breed, _ wag: Double, _ asleep: Bool) -> AnyView
-    let head: (Cat, _ s: Double, _ blink: Bool, _ asleep: Bool, _ look: CGSize) -> AnyView
-    let kittenEars: (Breed) -> AnyView     // the small pets that wait for you: behind the head
-    let kittenFace: (Breed) -> AnyView     // on top of it
     let sceneEars: (inout GraphicsContext, _ fur: Color, _ dark: Color) -> Void   // the pet in Burrow's scene
 }
 
 let pets = [catPet, pugPet, bearPet]
 var petKind: PetKind { pets.first { $0.name == pet } ?? catPet }
 var breeds: [Breed] { petKind.coats }
+
+// Drawing picks the pet with a switch, not with closures stored in PetKind: SwiftUI can compare a switch's views
+// frame to frame; an AnyView from a closure hides the view type, so SwiftUI may rebuild it every frame.
+extension Cat {
+    @ViewBuilder func tail(wag: Double, asleep: Bool) -> some View {
+        switch petKind.name {
+        case "pug": pugTail(wag: wag)
+        case "bear": bearTail(wag: wag)
+        default: catTail(wag: wag, asleep: asleep)
+        }
+    }
+    @ViewBuilder func petHead(s: Double, blink: Bool, asleep: Bool, look: CGSize) -> some View {
+        switch petKind.name {
+        case "pug": pugHead(blink: blink, asleep: asleep, look: look)
+        case "bear": bearHead(s: s, blink: blink, asleep: asleep, look: look)
+        default: catHead(blink: blink, asleep: asleep, look: look)
+        }
+    }
+}
+/// The small pets that wait for you: ears behind the head, face markings on top.
+@ViewBuilder func kittenEars(_ b: Breed) -> some View {
+    switch petKind.name {
+    case "pug": EmptyView()
+    case "bear": bearKittenEars(b)
+    default: catKittenEars(b)
+    }
+}
+@ViewBuilder func kittenFace(_ b: Breed) -> some View {
+    switch petKind.name {
+    case "pug": pugKittenFace(b)
+    case "bear": bearKittenFace(b)
+    default: EmptyView()
+    }
+}
 
 
 
@@ -126,7 +157,7 @@ struct Cat: View {
             let loaf = g == .loaf
             ZStack(alignment: .topTrailing) {
                 ZStack {
-                    petKind.tail(b, wag, asleep)
+                    tail(wag: wag, asleep: asleep)
                     ForEach(0..<4) { i in
                         let y = asleep ? 64 : 63 + (i % 2 == 0 ? step : -step) * 2
                         Capsule().fill(drip ? ink : (b.points ?? (i % 2 == 0 ? b.dark : b.fur))).frame(width: petKind.chunky ? 10 : 7, height: asleep || loaf ? 4 : 12)
@@ -220,7 +251,7 @@ struct Cat: View {
     }
 
     @ViewBuilder func head(s: Double, blink: Bool, asleep: Bool) -> some View {
-        petKind.head(self, s, blink, asleep, lookVector())
+        petHead(s: s, blink: blink, asleep: asleep, look: lookVector())
     }
 
     @ViewBuilder func eyes(blink: Bool, asleep: Bool, look: CGSize) -> some View {

@@ -79,9 +79,9 @@ struct Kitten: View {
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             ZStack {
                 Ellipse().fill(breed.fur).frame(width: 26, height: 15).position(x: 15, y: 33)
-                petKind.kittenEars(breed)
+                kittenEars(breed)
                 Circle().fill(breed.fur).frame(width: 20, height: 19).position(x: 15, y: 17)
-                petKind.kittenFace(breed)
+                kittenFace(breed)
                 if !agent.mark.isEmpty {
                     Text(agent.mark).font(.system(size: 7, weight: .black, design: .rounded)).foregroundColor(.white)
                         .frame(width: 10, height: 10).background(Circle().fill(agent.color)).position(x: 15, y: 29)

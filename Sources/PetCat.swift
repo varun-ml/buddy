@@ -6,15 +6,6 @@ import SwiftUI
 let catPet = PetKind(
     name: "cat", emoji: "🐱", hello: "😼", coats: catBreeds,
     tricks: [.stretch, .yawn, .spin, .wash, .loaf, .sneeze, .zoomies, .knock, .hop],
-    tail: { b, wag, asleep in AnyView(TailShape(curl: asleep ? 1 : 0)
-        .stroke(b.points ?? b.fur, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-        .rotationEffect(.degrees(wag), anchor: UnitPoint(x: 20 / 84, y: 50 / 72))) },
-    head: { c, s, blink, asleep, look in AnyView(c.catHead(blink: blink, asleep: asleep, look: look)) },
-    kittenEars: { b in AnyView(ZStack {
-        Tri(a: CGPoint(x: 6, y: 12), b: CGPoint(x: 7, y: 2), c: CGPoint(x: 13, y: 8)).fill(b.points ?? b.fur)
-        Tri(a: CGPoint(x: 17, y: 8), b: CGPoint(x: 23, y: 2), c: CGPoint(x: 24, y: 12)).fill(b.points ?? b.fur)
-    }) },
-    kittenFace: { _ in AnyView(EmptyView()) },
     sceneEars: { c, fur, _ in
         var ears = Path()
         ears.move(to: CGPoint(x: 3, y: -25)); ears.addLine(to: CGPoint(x: 4, y: -32)); ears.addLine(to: CGPoint(x: 9, y: -28)); ears.closeSubpath()
@@ -32,7 +23,20 @@ let catBreeds: [Breed] = [
     Breed(name: "Midnight", fur: rgb(22, 22, 28), dark: rgb(10, 10, 14), belly: rgb(40, 40, 48), eye: rgb(250, 205, 60)),
 ]
 
+func catKittenEars(_ b: Breed) -> some View {
+    ZStack {
+        Tri(a: CGPoint(x: 6, y: 12), b: CGPoint(x: 7, y: 2), c: CGPoint(x: 13, y: 8)).fill(b.points ?? b.fur)
+        Tri(a: CGPoint(x: 17, y: 8), b: CGPoint(x: 23, y: 2), c: CGPoint(x: 24, y: 12)).fill(b.points ?? b.fur)
+    }
+}
+
 extension Cat {
+    func catTail(wag: Double, asleep: Bool) -> some View {
+        TailShape(curl: asleep ? 1 : 0)
+            .stroke(b.points ?? b.fur, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+            .rotationEffect(.degrees(wag), anchor: UnitPoint(x: 20 / 84, y: 50 / 72))
+    }
+
     @ViewBuilder func catHead(blink: Bool, asleep: Bool, look: CGSize) -> some View {
         ZStack {
             Tri(a: CGPoint(x: 45, y: 24), b: CGPoint(x: 47, y: 6), c: CGPoint(x: 58, y: 18)).fill(b.fur)
