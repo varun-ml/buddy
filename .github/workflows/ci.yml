@@ -1,0 +1,36 @@
+# Every PR: build, self-test, hook test, and pictures of the card before and after, so a reviewer can judge it without building.
+name: ci
+on: [pull_request, push]
+jobs:
+  check:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Build
+        run: swiftc -swift-version 5 -O -suppress-warnings Sources/*.swift -o Buddy
+      - name: Self-test
+        run: ./Buddy --selftest
+      - name: Hook test
+        run: python3 test_beat.py
+      - name: Card snapshots (after)
+        run: ./Buddy --snapshot snapshots/after
+      - name: Card snapshots (before), and what changed
+        if: github.event_name == 'pull_request'
+        run: |
+          git worktree add -q /tmp/base ${{ github.event.pull_request.base.sha }}
+          (cd /tmp/base && swiftc -swift-version 5 -O -suppress-warnings Sources/*.swift -o Buddy && ./Buddy --snapshot "$GITHUB_WORKSPACE/snapshots/before" ) || { echo "base has no --snapshot; skipping the comparison"; exit 0; }
+          pip3 install -q --break-system-packages pillow
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import os
+          from PIL import Image, ImageChops
+          print("| view | change |\n|---|---|")
+          for f in sorted(os.listdir("snapshots/after")):
+              a, b = Image.open(f"snapshots/before/{f}").convert("RGBA"), Image.open(f"snapshots/after/{f}").convert("RGBA")
+              if a.size != b.size: print(f"| {f} | size {a.size} → {b.size} |"); continue
+              n = sum(1 for v in ImageChops.difference(a, b).convert("L").getdata() if v > 24)
+              print(f"| {f} | {'identical' if n == 0 else f'{n} pixels differ'} |")
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: card-snapshots, path: snapshots }

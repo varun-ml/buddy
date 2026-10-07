@@ -5,7 +5,7 @@ Writes ~/.claude/pet/sessions/<session_id>.json. Never fails the hook: any error
 """
 import json, os, re, subprocess, sys, time
 
-DIR = os.path.expanduser('~/.claude/pet/sessions')
+DIR = os.environ.get('BUDDY_SESSIONS') or os.path.expanduser('~/.claude/pet/sessions')   # tests point this elsewhere
 
 def short(tool, inp):
     arg = inp.get('command') or inp.get('file_path') or inp.get('pattern') or inp.get('description') or inp.get('url') or ''
