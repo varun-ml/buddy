@@ -164,7 +164,7 @@ let _migrated: Void = {
 }()
 let config: [String: Any] = FileManager.default.contents(atPath: (NSHomeDirectory() as NSString).appendingPathComponent(".config/buddy.json"))
     .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
-let statsRepos = config["statsRepos"] as? [String] ?? []
+var statsRepos = config["statsRepos"] as? [String] ?? []
 /// "cat", "pug", "bear", or "random": cat, pug, bear in turn, one per day.
 var pet: String {
     let p = config["pet"] as? String ?? "cat"

@@ -35,6 +35,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
     // test: render the card in every theme and tab to PNGs, from a fixed made-up profile (never your real one), for before/after checks
     let dir = CommandLine.arguments[i + 1], now = Date().timeIntervalSince1970
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
+    statsRepos = ["you/demo"]   // the card shows PR tiles only when repos are set; never your own settings
     let m = Model()
     m.sessions = [
         Session(id: "a", cwd: "/x/pricing-page", repo: "pricing-page", branch: "main", state: "waiting", activity: "Bash: npm test", prompt: "fix the test", ts: now - 120),
