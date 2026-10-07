@@ -172,10 +172,12 @@ var pet: String {
     guard p == "random" else { return p }
     // read dozens of times per frame; the calendar only needs asking once a minute
     if Date().timeIntervalSince(randomDay.at) > 60 {
-        randomDay = (Date(), ["cat", "pug", "bear"][(Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0) % 3])
+        randomDay = (Date(), randomPet(day: Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0))
     }
     return randomDay.pet
 }
+/// "random": every buddy in turn, animals and avatars, one per day.
+func randomPet(day: Int) -> String { pets[day % pets.count].name }
 var randomDay = (at: Date.distantPast, pet: "cat")
 /// Your pick: right-click → Buddy, or "pet" in buddy.json. Read once, then kept here.
 var petChoice = UserDefaults.standard.string(forKey: "bit.pet") ?? config["pet"] as? String ?? "cat"
