@@ -181,7 +181,7 @@ var randomDay = (at: Date.distantPast, pet: "cat")
 var forcedPet: String?
 var frozenTime: Double?
 /// Sunglasses, tracksuit and sneakers, for pets that have them, unless buddy.json says "outfit": "none".
-var drip: Bool { petKind.outfit && (config["outfit"] as? String ?? "drip") == "drip" }
+var drip: Bool { petKind.outfit && costume == nil && (config["outfit"] as? String ?? "drip") == "drip" }   // a costume replaces it
 /// A celebration dance: transparent PNG frames in ~/.config/buddy/dance (install.sh makes them from ~/.config/buddy/dance.mp4).
 let danceFrames: [NSImage] = {
     let dir = (NSHomeDirectory() as NSString).appendingPathComponent(".config/buddy/dance")

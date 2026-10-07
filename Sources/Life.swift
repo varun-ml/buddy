@@ -260,6 +260,13 @@ extension Model {
         return out.sorted { $0.0 < $1.0 }.prefix(3).map(\.1)
     }
 
+    func setCostume(_ name: String) {
+        UserDefaults.standard.set(name, forKey: "bit.costume")
+        costume = name == "none" ? nil : name
+        objectWillChange.send()
+        if hero { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.doGesture(.heroLanding) } }   // suit up with an entrance
+    }
+
     func setTheme(_ name: String) {
         UserDefaults.standard.set(name, forKey: "bit.theme")
         T = themes[name] ?? T; themeName = name; onExpandChange?()

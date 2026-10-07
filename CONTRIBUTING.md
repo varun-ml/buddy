@@ -45,6 +45,10 @@ python3 test_beat.py                                                     # the h
 
 Copy `Sources/PetBear.swift` (Siddharth's bear) to `PetYours.swift`: coats, tricks, and how its head, tail and ears draw. Add it to `pets` in `Pet.swift`. `./Buddy --snapshot` draws every coat, so you can see it without installing.
 
+### Add a costume
+
+Costumes are drawn over any pet (`Sources/Costume.swift`): the caped hero is the model. A costume adds its drawing, can change the walk, and brings its own moves (new `Gesture` cases). `./Buddy --costume hero --trick grapple` tries one live. Original characters only: no trademarked heroes.
+
 ### Also welcome
 
 - **A theme.** Each theme is one card view (`BurrowCard`, `GlassCard`, `InkCard`); the data they show is shaped once in `Theme.swift`.

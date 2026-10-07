@@ -25,6 +25,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let sx = Session(id: "x", ts: 0)   // each session finds its agent by source; unknown agents look like Claude Code
     precondition(sx.agent.label == "Claude" && Session(id: "x", ts: 0, source: "codex-cli").agent.label == "Codex" && Session(id: "x", ts: 0, source: "cursor").agent.label == "Claude")
     precondition(Set(pets.map(\.name)).count == pets.count && pets.allSatisfy { !$0.coats.isEmpty && !$0.tricks.isEmpty })   // every pet: a unique name, coats, tricks
+    precondition(ease(0) == 0 && ease(1) == 1 && ease(2) == 1 && heroMotion(.heroLanding, 0.45).y < 0 && heroMotion(.heroLanding, 2) == (0, 1, 0))   // the hero lands back on the floor
     let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
     q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
     q.showCard = false; q.sayNext(); precondition(q.bubble?.text == "selftest a")
@@ -90,6 +91,34 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/pet-\(p).png"))
         }
     } }
+    MainActor.assumeIsolated {   // the caped hero on each pet: standing, gliding, landing crouch, flying
+        costume = "hero"
+        var rows: [[Model]] = []
+        for p in ["cat", "pug", "bear"] {
+            forcedPet = p
+            rows.append((0..<4).map { i in
+                let pm = Model(); pm.breedIndex = 0; pm.sessions = [Session(id: "w", state: "working", ts: now)]
+                if i == 1 { pm.walking = true }
+                if i == 2 { pm.gesture = .heroLanding; pm.gestureAt = Date().addingTimeInterval(-0.8) }
+                if i == 3 { pm.gesture = .grapple; pm.gestureAt = Date().addingTimeInterval(-2) }
+                return pm
+            })
+        }
+        var imgs: [NSImage] = []
+        for (r, p) in ["cat", "pug", "bear"].enumerated() {
+            forcedPet = p
+            let row = HStack(spacing: 6) { ForEach(rows[r].indices, id: \.self) { i in Cat(m: rows[r][i]).frame(width: 96, height: 84) } }
+                .padding(8).background(Color.white).environment(\.colorScheme, .light)
+            let rr = ImageRenderer(content: row); rr.scale = 2
+            if let img = rr.nsImage { imgs.append(img) }
+        }
+        for (r, img) in imgs.enumerated() {
+            if let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: "\(dir)/hero-\(["cat", "pug", "bear"][r]).png"))
+            }
+        }
+        costume = nil; forcedPet = nil
+    }
     print("snapshots in \(dir)"); exit(0)
 }
 if CommandLine.arguments.contains("--dump") {
