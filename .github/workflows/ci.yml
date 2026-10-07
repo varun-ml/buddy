@@ -13,13 +13,18 @@ jobs:
         run: ./Buddy --selftest
       - name: Hook test
         run: python3 test_beat.py
-      - name: Card snapshots (after)
-        run: ./Buddy --snapshot snapshots/after
-      - name: Card snapshots (before), and what changed
-        if: github.event_name == 'pull_request'
+      - name: Card and pet snapshots, before and after
         run: |
-          git worktree add -q /tmp/base ${{ github.event.pull_request.base.sha }}
-          (cd /tmp/base && swiftc -swift-version 5 -O -suppress-warnings Sources/*.swift -o Buddy && ./Buddy --snapshot "$GITHUB_WORKSPACE/snapshots/before" ) || { echo "base has no --snapshot; skipping the comparison"; exit 0; }
+          # build the base first, then render both back to back, so the clock reads the same in both
+          if [ "${{ github.event_name }}" = pull_request ]; then
+            git worktree add -q /tmp/base ${{ github.event.pull_request.base.sha }}
+            (cd /tmp/base && swiftc -swift-version 5 -O -suppress-warnings Sources/*.swift -o Buddy) || echo "base does not build; no comparison"
+          fi
+          [ -x /tmp/base/Buddy ] && /tmp/base/Buddy --snapshot "$GITHUB_WORKSPACE/snapshots/before" >/dev/null || true
+          ./Buddy --snapshot snapshots/after
+      - name: What changed
+        if: github.event_name == 'pull_request' && hashFiles('snapshots/before/*.png') != ''
+        run: |
           pip3 install -q --break-system-packages pillow
           python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
           import os
