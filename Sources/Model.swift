@@ -159,12 +159,12 @@ final class Model: ObservableObject {
     /// A little bit of business: stretch, yawn, chase tail, wash, loaf, sneeze, zoomies, knock something off, hop.
     /// Bears: rear up and roar, eat honey, swipe a fish out of the air, scratch their back.
     func doGesture(_ g: Gesture? = nil) {
-        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : []) + (hero ? [.capeSwirl, .capeSwirl, .grapple] : [])).randomElement()!   // grapple: about 1 trick in 14
+        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : []) + costumeTricks).randomElement()!
         gesture = pick
         gestureAt = Date()
         if pick == .zoomies { zoomies = true }
         if pick == .hop { celebrate += 1 }
-        let dur: Double = [.loaf: 6, .zoomies: 3, .honey: 3, .scratch: 3, .heroLanding: 1.5, .flyOff: 3.9, .grapple: 6.1, .capeSwirl: 1.3][pick] ?? 2.4
+        let dur: Double = [.loaf: 6, .zoomies: 3, .honey: 3, .scratch: 3, .heroLanding: 1.5, .flyOff: 3.9, .grapple: 6.1, .capeSwirl: 1.3, .dhunuchi: 3, .quietDhak: 2, .diyas: 3, .phuljhari: 2, .anaar: 1.8, .rangoli: 4.5, .kandil: 4][pick] ?? 2.4
         DispatchQueue.main.asyncAfter(deadline: .now() + dur) { [weak self] in
             if self?.gesture == pick { self?.gesture = .none; self?.zoomies = false }
         }
@@ -284,15 +284,15 @@ final class Model: ObservableObject {
     private var waitingToSay: [(b: Bubble, seconds: Double, pose: Pose, at: Date)] = []
 
     func say(_ text: String, _ tone: Mood, seconds: Double = 10, kind: BubbleKind = .event, byline: String? = nil,
-             pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, action: (() -> Void)? = nil) {
+             pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, cue: Cue? = nil, action: (() -> Void)? = nil) {
         let napping = snoozed && tone != .happy
         if (napping || squatting) && kind != .event { return }
         if !napping {
             if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
             // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
             if kind == .event && tone == .happy { dance() }
-            if kind == .event && tone == .upset, let g = hero ? .flyOff : petKind.onRed { doGesture(g) }   // the hero flies off to fix it     // a bear roars at a red PR
-            if kind == .event && tone == .happy, let g = hero ? .heroLanding : petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
+            if kind == .event && tone == .upset, let g = costumeMove(.red) ?? petKind.onRed { doGesture(g) }   // the hero flies off to fix it     // a bear roars at a red PR
+            if kind == .event && tone == .happy, let g = costumeMove(cue ?? .merge) ?? petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
             if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
             if showCard && tone == .happy { celebrate += 1 }
         }
@@ -432,6 +432,7 @@ final class Model: ObservableObject {
               demo || now.timeIntervalSince(lastEventAt) > 180, demo || now.timeIntervalSince(hoverEndedAt) > 120 else { return }
         nextSlot = now.addingTimeInterval(demo ? 12 : 8 * 60)
         let hour = Calendar.current.component(.hour, from: now)
+        if costume != "off", let hi = festivalGreetings[isoDay.string(from: now)], Day.once("festival") { say(hi, .happy, seconds: 12, kind: .ambient); return }
         if hour >= 19, Day.once("recap") { recap(); return }
         // Weighted draw without replacement; a card with nothing worth saying returns false and the next draw gets a go.
         var bag: [(Int, () -> Bool)] = [(40, socratic), (30, stoic), (20, tally), (10, team)]
@@ -524,7 +525,7 @@ final class Model: ObservableObject {
         if now.timeIntervalSince(workingSince!) >= Double(config["breakMins"] as? Int ?? 90) * 60, now.timeIntervalSince(lastBreakNudge) >= 30 * 60 {
             lastBreakNudge = now
             doGesture(.stretch)
-            say("\(ago(now.timeIntervalSince(workingSince!))) without a break. 10-minute walk? 🚶", .calm, seconds: 20, kind: .ambient)
+            say(line("break", "\(ago(now.timeIntervalSince(workingSince!))) without a break. 10-minute walk? 🚶", ["t": ago(now.timeIntervalSince(workingSince!))]), .calm, seconds: 20, kind: .ambient)
             return
         }
         // juggling: too many sessions in flight at once (buddy.json "juggle", default 5)
@@ -544,7 +545,7 @@ final class Model: ObservableObject {
             let open = working + waiting + stuck + yourTurn
             let note = (["Tomorrow, pick up:"] + open.map { "• \($0.repo ?? "?"): \($0.prompt ?? $0.activity ?? "")" }
                         + needsYouPRs.map { "• fix \($0.short): \($0.title)" } + todos.map { "• \($0.text)" }).joined(separator: "\n")
-            say("It's past \(stop[0]):\(String(format: "%02d", stop[1])). Time to stop 🌙\n\(open.count) sessions and \(needsYouPRs.count) red PRs still open. Tap to copy a note for tomorrow.",
+            say(line("stop", "It's past \(stop[0]):\(String(format: "%02d", stop[1])). Time to stop 🌙", ["time": "\(stop[0]):\(String(format: "%02d", stop[1]))"]) + "\n\(open.count) sessions and \(needsYouPRs.count) red PRs still open. Tap to copy a note for tomorrow.",
                 .calm, seconds: 25, kind: .event, sound: "Purr") {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(note, forType: .string)
             }
@@ -576,11 +577,11 @@ final class Model: ObservableObject {
             let name = s.repo ?? "A session"
             if prev != nil, prev != s.state {
                 if s.state == "waiting" {
-                    say("\(s.agent.mark.isEmpty ? "" : s.agent.mark + " ")\(name) wants your OK\n\(s.activity ?? "")", .waiting, seconds: 25, action: { activate(s) })
+                    say("\(s.agent.mark.isEmpty ? "" : s.agent.mark + " ")" + line("waiting", "\(name) wants your OK", ["repo": name]) + "\n\(s.activity ?? "")", .waiting, seconds: 25, action: { activate(s) })
                 } else if s.state == "finished", prev == "working" {
                     let took = s.turnStart.map { " in \(ago(now - $0))" } ?? ""
                     let mark = s.agent.mark.isEmpty ? "" : s.agent.mark + " "
-                    say("\(mark)\(name) is done\(took). Tap to open ✨\n\(s.said ?? s.prompt ?? "")", .happy, seconds: 15, sound: "Pop", action: { activate(s) })
+                    say(mark + line("done", "\(name) is done\(took). Tap to open ✨", ["repo": name]) + "\n\(s.said ?? s.prompt ?? "")", .happy, seconds: 15, sound: "Pop", cue: .done, action: { activate(s) })
                 }
             }
             lastStates[s.id] = s.state
@@ -630,7 +631,7 @@ final class Model: ObservableObject {
             let prev = lastCI[pr.id]
             if !first, prev != pr.ci {
                 if pr.needsYou {
-                    say("Oh no, \(pr.short) broke\nhover me to see why", .upset, seconds: 30)
+                    say(line("red", "Oh no, \(pr.short) broke\nhover me to see why", ["pr": pr.short]), .upset, seconds: 30)
                 } else if pr.ci == "green", prev == "red" || prev == "pending" {
                     say("\(pr.short) is green ✨", .happy, seconds: 8) { NSWorkspace.shared.open(URL(string: pr.url)!) }
                 }
@@ -638,7 +639,7 @@ final class Model: ObservableObject {
             lastCI[pr.id] = pr.ci
         }
         if let merged = merged {
-            if !first, merged > mergedToday { say("Merged! That's \(merged) today 🏆", .happy, seconds: 8) }
+            if !first, merged > mergedToday { say(line("merged", "Merged! That's \(merged) today 🏆", ["n": "\(merged)"]), .happy, seconds: 8) }
             mergedToday = merged
         }
         prs = new

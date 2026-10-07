@@ -101,7 +101,8 @@ extension Cat {
 
 
 enum Gesture: CaseIterable { case none, stretch, yawn, spin, wash, loaf, sneeze, zoomies, knock, hop, shimmy, roar, honey, fish, scratch,
-    heroLanding, flyOff, grapple, capeSwirl }   // the last four: the caped hero (Costume.swift)
+    heroLanding, flyOff, grapple, capeSwirl,   // the caped hero (Costume.swift)
+    dhak, dhunuchi, quietDhak, shiuli, diyas, phuljhari, anaar, rangoli, kandil }   // Pujo and Diwali (Festive.swift)
 
 struct Particle: Identifiable { let id = UUID(); let glyph: String; let dx: CGFloat; var fall = false }
 
@@ -149,10 +150,10 @@ struct Cat: View {
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             let asleep = mood == .asleep
             let breathe = 1 + (asleep ? 0.05 : 0.025) * sin(s * (asleep ? 1.4 : 2.4))
-            let g = m.gesture, gt = Date().timeIntervalSince(m.gestureAt)
+            let g = m.gesture, gt = (frozenNow ?? Date()).timeIntervalSince(m.gestureAt)
             let flying = hero && (g == .flyOff || g == .grapple)
             let gliding = hero && (m.walking && !m.zoomies || flying)   // the hero glides: feet off the ground, legs tucked
-            let hm = hero ? heroMotion(g, gt) : (y: CGFloat(0), squash: CGFloat(1), tilt: 0.0)
+            let hm = wearing != nil ? costumeMotion(g, gt) : (y: CGFloat(0), squash: CGFloat(1), tilt: 0.0)
             let step = m.walking && !gliding ? sin(s * 12) : 0
             let wagSpeed: Double = m.hovering ? 9 : mood == .busy ? 4 : mood == .upset ? 14 : 2
             let wag = asleep ? 0 : sin(s * wagSpeed) * (m.hovering ? 16 : 9)
@@ -172,7 +173,7 @@ struct Cat: View {
                                 .position(x: [23, 33, 47, 57][i], y: y + 4.5)
                         }
                     }
-                    Ellipse().fill(drip ? ink : b.fur).frame(width: petKind.chunky ? 60 : 54, height: asleep ? (petKind.chunky ? 30 : 26) : (petKind.chunky ? 35 : 30))
+                    Ellipse().fill(outfitFill ?? (drip ? ink : b.fur)).frame(width: petKind.chunky ? 60 : 54, height: asleep ? (petKind.chunky ? 30 : 26) : (petKind.chunky ? 35 : 30))
                         .scaleEffect(y: breathe, anchor: .bottom)
                         .position(x: 38, y: asleep ? 54 : 50)
                     if drip {
@@ -180,6 +181,8 @@ struct Cat: View {
                         ForEach(0..<2) { i in Capsule().fill(Color.white).frame(width: 30, height: 1.6).rotationEffect(.degrees(-8)).position(x: 34, y: (asleep ? 47 : 43) + CGFloat(i) * 4) }
                         Capsule().fill(Color.white).frame(width: 34, height: 3).position(x: 40, y: asleep ? 63 : 62)
                         ForEach([55.0, 63.0], id: \.self) { x in Capsule().fill(Color.white).frame(width: 1.6, height: 8).position(x: x, y: asleep ? 60 : 54) }   // hoodie strings
+                    } else if outfitFill != nil {
+                        outfitTrim(asleep: asleep)
                     } else {
                         markings(asleep: asleep)
                         Ellipse().fill(b.belly.opacity(0.85)).frame(width: 26, height: 10).position(x: 46, y: asleep ? 60 : 58)
@@ -188,10 +191,12 @@ struct Cat: View {
                     ZStack {
                         head(s: s, blink: blink, asleep: asleep)
                         if hero { mask(blink: blink, asleep: asleep) }
+                        festiveHead()
                         poseLayer
                     }
                     .rotationEffect(.degrees(m.pose == .thinking ? -9 : 0), anchor: UnitPoint(x: 0.7, y: 0.6))
                     .offset(y: asleep ? 10 : 0)
+                    if wearing == "durga" || wearing == "diwali" { festiveProps(s: s, gt: gt) }
                 }
                 .frame(width: 84, height: 72)
                 .shadow(color: .black.opacity(0.45), radius: 0.8)   // outline, so white cats show on white pages
@@ -207,7 +212,7 @@ struct Cat: View {
                 .rotationEffect(.degrees(g == .scratch ? sin(gt * 6) * 4 : 0), anchor: .bottom)
                 .scaleEffect(x: 1 / hm.squash * (hm.squash < 1 ? 0.9 : 1), y: hm.squash, anchor: .bottom)
                 .rotationEffect(.degrees(hm.tilt + (gliding && !flying ? 8 : 0)), anchor: .center)
-                .offset(y: hm.y + (gliding ? -10 + sin(s * 3) * 2 : 0))
+                .offset(y: hm.y + (gliding ? -10 + sin(s * 3) * 2 : 0) + (wearing == "durga" && m.walking ? pandalHop(s) : 0))
                 .scaleEffect(x: m.facingLeft ? -1 : 1, y: 1)
                 accessory(s: s).frame(width: 84, height: 20).offset(y: -22)
                 if m.badge > 0 && !m.snoozed {
@@ -248,6 +253,11 @@ struct Cat: View {
             case .capeSwirl: burst(["✨"])
             case .grapple: burst(["🪝"])
             case .flyOff: burst(["💨"])
+            case .dhak: DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { burst(["dhyang", "kur kur"]) }
+            case .shiuli: burst(["✿", "✿", "✿"], fall: true)
+            case .phuljhari: burst(["✦", "✦"])
+            case .anaar: DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { burst(["phuss"]) }
+            case .kandil: burst(["🏮"])
             default: break
             }
         }

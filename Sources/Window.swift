@@ -204,7 +204,7 @@ struct PetView: View {
             // dwell: a cat walking under a resting cursor must not pop the card open
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 guard catHover, !m.showCard else { return }
-                m.bubble = nil; m.pose = .none; m.tab = m.familyTime ? "personal" : "work"; m.showCard = true; m.onExpandChange?()
+                m.bubble = nil; m.pose = .none; m.tab = "work"; m.showCard = true; m.onExpandChange?()
             }
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -413,7 +413,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if abs(dx) < 2 { target = nil; m.walking = false; return }
         if !m.walking { m.walking = true }
         if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
-        f.origin.x += dx > 0 ? min(1.3, dx) : max(-1.3, dx)
+        let pace: CGFloat = wearing == "diwali" && evening ? 0.9 : 1.3   // careful steps with a lit diya
+        f.origin.x += dx > 0 ? min(pace, dx) : max(-pace, dx)
         panel.setFrameOrigin(f.origin)
     }
 
