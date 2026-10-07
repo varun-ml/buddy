@@ -78,10 +78,12 @@ struct Kitten: View {
         TimelineView(.animation(minimumInterval: 1.0 / 10)) { t in
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             ZStack {
-                Ellipse().fill(breed.fur).frame(width: 26, height: 15).position(x: 15, y: 33)
-                kittenEars(breed)
-                Circle().fill(breed.fur).frame(width: 20, height: 19).position(x: 15, y: 17)
-                kittenFace(breed)
+                if !petKind.biped { Ellipse().fill(breed.fur).frame(width: 26, height: 15).position(x: 15, y: 33) }
+                if petKind.biped { avatarKitten(breed) } else {
+                    kittenEars(breed)
+                    Circle().fill(breed.fur).frame(width: 20, height: 19).position(x: 15, y: 17)
+                    kittenFace(breed)
+                }
                 if !agent.mark.isEmpty {
                     Text(agent.mark).font(.system(size: 7, weight: .black, design: .rounded)).foregroundColor(.white)
                         .frame(width: 10, height: 10).background(Circle().fill(agent.color)).position(x: 15, y: 29)
@@ -173,6 +175,11 @@ struct PetView: View {
                     Menu("Theme") {
                         ForEach(["burrow", "glass", "ink"], id: \.self) { n in
                             Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
+                        }
+                    }
+                    Menu("Buddy") {
+                        ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
+                            Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }
                         }
                     }
                     Menu("Costume") {

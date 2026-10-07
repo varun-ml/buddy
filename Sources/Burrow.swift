@@ -360,6 +360,9 @@ func quad(_ p: inout Path, _ c: CGPoint, _ e: CGPoint) { p.addQuadCurve(to: e, c
 struct ScenePet: View {
     var fur: Color, dark: Color
     var body: some View {
+        if petKind.biped { avatarKitten(breeds[0]).scaleEffect(0.8).frame(width: 30, height: 40).offset(x: 10, y: -2) } else { animal }
+    }
+    var animal: some View {
         Canvas { c, size in
             c.translateBy(x: 26, y: 40)
             var tail = Path(); tail.move(to: CGPoint(x: -10, y: -8)); quad(&tail, CGPoint(x: -20, y: -10), CGPoint(x: -19, y: -22))

@@ -78,7 +78,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         }
     } } }
     frozenTime = 800_000_000
-    MainActor.assumeIsolated { for p in ["cat", "pug", "bear"] {   // every coat of every pet, awake, plus a sleeping one, a kitten and the Burrow scene pet
+    MainActor.assumeIsolated { for p in pets.map(\.name) {   // every coat of every pet, awake, plus a sleeping one, a kitten and the Burrow scene pet
         forcedPet = p
         let models: [Model] = (0..<breeds.count + 1).map { i in
             let pm = Model(); pm.breedIndex = i % breeds.count
@@ -103,7 +103,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         ("diwali", [nil, (.diyas, 2), (.phuljhari, 0.7), (.anaar, 0.9), (.rangoli, 3), (.kandil, 1.5)]),
     ]
     MainActor.assumeIsolated {
-        for (c, ps) in poses { for p in ["cat", "pug", "bear"] {
+        for (c, ps) in poses { for p in pets.filter({ !$0.biped }).map(\.name) {
             costume = c; forcedPet = p
             let models: [Model] = ps.map { pose in
                 let pm = Model(); pm.breedIndex = 0; pm.sessions = [Session(id: "w", state: "working", ts: now)]
@@ -117,6 +117,24 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
                 try? png.write(to: URL(fileURLWithPath: "\(dir)/costume-\(c)-\(p).png"))
             }
         } }
+        // every avatar: standing, walking, hero landing, flying, cape swirl, asleep
+        let moves: [(Gesture, Double)?] = [nil, (.none, -1), (.heroLanding, 0.8), (.grapple, 2), (.capeSwirl, 0.6), (.none, -2)]
+        for p in pets.filter(\.biped).map(\.name) {
+            costume = "off"; forcedPet = p
+            let models: [Model] = moves.map { pose in
+                let pm = Model(); pm.breedIndex = 0
+                if let (g, t) = pose, t == -2 { return pm }   // no sessions: asleep
+                pm.sessions = [Session(id: "w", state: "working", ts: now)]
+                if let (g, t) = pose { if t < 0 { pm.walking = true } else { pm.gesture = g; pm.gestureAt = frozenNow!.addingTimeInterval(-t) } }
+                return pm
+            }
+            let row = HStack(spacing: 6) { ForEach(models.indices, id: \.self) { i in Cat(m: models[i]).frame(width: 96, height: 84) } }
+                .padding(8).background(Color.white).environment(\.colorScheme, .light)
+            let r = ImageRenderer(content: row); r.scale = 2
+            if let img = r.nsImage, let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: "\(dir)/moves-\(p).png"))
+            }
+        }
         costume = "off"; forcedPet = nil; frozenNow = nil
     }
     print("snapshots in \(dir)"); exit(0)

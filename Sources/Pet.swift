@@ -57,10 +57,12 @@ struct PetKind {
     var outfit = false            // wears the tracksuit, sneakers and shades ("outfit": "none" turns it off)
     var dances = false            // plays the dance clip on good news
     var chunky = false            // wider legs and body
+    var biped = false             // an avatar on two legs, drawn whole by its own file (Avatars.swift)
+    var bursts: [Gesture: [String]] = [:]   // its own words or emoji for a trick, instead of the usual ("ROAR!" → "HAI-YA!")
     let sceneEars: (inout GraphicsContext, _ fur: Color, _ dark: Color) -> Void   // the pet in Burrow's scene
 }
 
-let pets = [catPet, pugPet, bearPet]
+let pets = [catPet, pugPet, bearPet, heroBuddy]
 var petKind: PetKind { pets.first { $0.name == pet } ?? catPet }
 var breeds: [Breed] { petKind.coats }
 
@@ -153,7 +155,7 @@ struct Cat: View {
             let g = m.gesture, gt = (frozenNow ?? Date()).timeIntervalSince(m.gestureAt)
             let flying = hero && (g == .flyOff || g == .grapple)
             let gliding = hero && (m.walking && !m.zoomies || flying)   // the hero glides: feet off the ground, legs tucked
-            let hm = wearing != nil ? costumeMotion(g, gt) : (y: CGFloat(0), squash: CGFloat(1), tilt: 0.0)
+            let hm = wearing != nil || petKind.biped ? costumeMotion(g, gt) : (y: CGFloat(0), squash: CGFloat(1), tilt: 0.0)
             let step = m.walking && !gliding ? sin(s * 12) : 0
             let wagSpeed: Double = m.hovering ? 9 : mood == .busy ? 4 : mood == .upset ? 14 : 2
             let wag = asleep ? 0 : sin(s * wagSpeed) * (m.hovering ? 16 : 9)
@@ -162,6 +164,10 @@ struct Cat: View {
             let loaf = g == .loaf
             ZStack(alignment: .topTrailing) {
                 ZStack {
+                  if petKind.biped {
+                    avatarBody(AvatarPose(b: b, s: s, step: m.walking ? sin(s * 12) : 0, asleep: asleep, blink: blink, g: g, gt: gt))
+                    poseLayer.offset(x: -8, y: -7)
+                  } else {
                     if hero { cape(s: s, moving: gliding, gt: gt) }
                     tail(wag: wag, asleep: asleep)
                     ForEach(0..<4) { i in
@@ -197,6 +203,7 @@ struct Cat: View {
                     .rotationEffect(.degrees(m.pose == .thinking ? -9 : 0), anchor: UnitPoint(x: 0.7, y: 0.6))
                     .offset(y: asleep ? 10 : 0)
                     if wearing == "durga" || wearing == "diwali" { festiveProps(s: s, gt: gt) }
+                  }
                 }
                 .frame(width: 84, height: 72)
                 .shadow(color: .black.opacity(0.45), radius: 0.8)   // outline, so white cats show on white pages
@@ -236,6 +243,7 @@ struct Cat: View {
         }
         .onChange(of: m.hearts) { _ in burst(["💖", "💗", "💖"]) }
         .onChange(of: m.gesture) { g in
+            if let words = petKind.bursts[g] { burst(words); return }
             switch g {
             case .sneeze: DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { burst(["achoo!"]) }
             case .knock: burst(["🥛"], fall: true)

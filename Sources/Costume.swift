@@ -10,7 +10,7 @@ var costume: String? = {
     return c == "none" ? nil : c
 }()
 /// What the pet has on right now: your pick, or the festival's (Festive.swift).
-var wearing: String? { costume == "off" ? nil : costume ?? festival() }
+var wearing: String? { costume == "off" || petKind.biped ? nil : costume ?? festival() }
 var hero: Bool { wearing == "hero" }
 let costumes = [("none", "Automatic (dresses up for festivals)"), ("hero", "Caped hero"), ("durga", "Pujo"), ("diwali", "Diwali"), ("off", "No costume, ever")]
 
