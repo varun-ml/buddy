@@ -346,6 +346,7 @@ struct Cat: View {
 
     /// Eyes follow the mouse anywhere on screen.
     func lookVector() -> CGSize {
+        if frozenTime != nil { return .zero }   // snapshots: eyes straight ahead, not at wherever your mouse is
         let mouse = NSEvent.mouseLocation
         let c = blobCenter()
         let dx = (mouse.x - c.x) * (m.facingLeft ? -1 : 1), dy = mouse.y - c.y

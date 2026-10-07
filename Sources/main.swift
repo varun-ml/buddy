@@ -42,7 +42,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
     // test: render the card in every theme and tab to PNGs, from a fixed made-up profile (never your real one), for before/after checks
     let dir = CommandLine.arguments[i + 1], now = Date().timeIntervalSince1970
-    costume = "off"   // the same pictures on any day, festival or not
+    costume = "off"; forcedPet = "cat"   // the same pictures on any day and any Mac, whatever costume or buddy you picked
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
     statsRepos = ["you/demo"]   // the card shows PR tiles only when repos are set; never your own settings
     let m = Model()
@@ -134,6 +134,26 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             let r = ImageRenderer(content: row); r.scale = 2
             if let img = r.nsImage, let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
                 try? png.write(to: URL(fileURLWithPath: "\(dir)/moves-\(p).png"))
+            }
+        }
+        // every buddy's walk: 6 frames across one step, so a walk that doesn't read shows up (a still frame can't show it)
+        for p in pets.map(\.name) {
+            costume = "off"; forcedPet = p
+            let pm = Model(); pm.breedIndex = 0; pm.sessions = [Session(id: "w", state: "working", ts: now)]; pm.walking = true
+            var frames: [NSImage] = []
+            for k in 0..<6 {
+                frozenTime = 800_000_000 + Double(k) * (2 * .pi / 12) / 6   // the walk's step is sin(12 s)
+                let r = ImageRenderer(content: Cat(m: pm).frame(width: 96, height: 84).background(Color.white).environment(\.colorScheme, .light)); r.scale = 2
+                if let img = r.nsImage { frames.append(img) }
+            }
+            frozenTime = 800_000_000
+            guard let first = frames.first else { continue }
+            let strip = NSImage(size: NSSize(width: first.size.width * CGFloat(frames.count), height: first.size.height))
+            strip.lockFocus()
+            for (i, f) in frames.enumerated() { f.draw(at: NSPoint(x: CGFloat(i) * first.size.width, y: 0), from: .zero, operation: .copy, fraction: 1) }
+            strip.unlockFocus()
+            if let t = strip.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: "\(dir)/walk-\(p).png"))
             }
         }
         costume = "off"; forcedPet = nil; frozenNow = nil
