@@ -49,7 +49,7 @@ Right-click Buddy → **Theme**.
 | Warm and playful. Your pet walks a little path as you make progress on the week's goal, and a plant grows a leaf for each step of the month. | A frosted macOS widget with big numbers and progress rings. | Dark and precise, for people who live in the terminal. |
 | <img src="docs/burrow.png" width="280"> | <img src="docs/glass.png" width="280"> | <img src="docs/ink.png" width="280"> |
 
-Pick your pet too: **cat**, **pug** or **bear** (`~/buddy/install.sh pug`), or `random` for a different one each day. Right-click → **Costume** → *Caped hero* puts any of them in a cape and mask: it glides instead of walking, does a hero landing when you merge, flies off when a PR breaks, and now and then grapples up to the top of your screen.
+Pick your buddy with right-click → **Buddy**: a **cat**, **pug** or **bear**, or one that isn't an animal: a **caped hero**, a **ninja**, a **wizard**, an **astronaut** or a **robot**, each with five looks and its own tricks (the ninja throws a toy star, the wizard teleports, the astronaut plants a flag when you merge, the robot dances). Or `random` for a different buddy each day. Right-click → **Costume** → *Caped hero* puts any of them in a cape and mask: it glides instead of walking, does a hero landing when you merge, flies off when a PR breaks, and now and then grapples up to the top of your screen.
 
 **Festivals:** Buddy dresses up on its own from a week before Durga Puja and Diwali to three days after: a red-bordered Pujo drape with kash flowers (it plays the dhak when an agent finishes, does a dhunuchi dance when you merge), or a Diwali kurta and marigold garland (lights diyas, waves a phuljhari, carries a diya after dark). Pick a costume yourself, or *No costume, ever*, and it won't.
 

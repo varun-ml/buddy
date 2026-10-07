@@ -165,18 +165,22 @@ let _migrated: Void = {
 let config: [String: Any] = FileManager.default.contents(atPath: (NSHomeDirectory() as NSString).appendingPathComponent(".config/buddy.json"))
     .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
 var statsRepos = config["statsRepos"] as? [String] ?? []
-/// "cat", "pug", "bear", or "random": cat, pug, bear in turn, one per day.
+/// Any buddy's name (see `pets`), or "random": a different one each day.
 var pet: String {
     if let p = forcedPet { return p }
-    let p = config["pet"] as? String ?? "cat"
+    let p = petChoice
     guard p == "random" else { return p }
     // read dozens of times per frame; the calendar only needs asking once a minute
     if Date().timeIntervalSince(randomDay.at) > 60 {
-        randomDay = (Date(), ["cat", "pug", "bear"][(Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0) % 3])
+        randomDay = (Date(), randomPet(day: Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0))
     }
     return randomDay.pet
 }
+/// "random": every buddy in turn, animals and avatars, one per day.
+func randomPet(day: Int) -> String { pets[day % pets.count].name }
 var randomDay = (at: Date.distantPast, pet: "cat")
+/// Your pick: right-click → Buddy, or "pet" in buddy.json. Read once, then kept here.
+var petChoice = UserDefaults.standard.string(forKey: "bit.pet") ?? config["pet"] as? String ?? "cat"
 /// Test seams for --snapshot: one pet, and a stopped clock so breathing and blinking draw the same every run.
 var forcedPet: String?
 var frozenTime: Double?

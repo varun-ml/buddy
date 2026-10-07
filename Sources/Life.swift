@@ -260,6 +260,14 @@ extension Model {
         return out.sorted { $0.0 < $1.0 }.prefix(3).map(\.1)
     }
 
+    func setPet(_ name: String) {
+        UserDefaults.standard.set(name, forKey: "bit.pet")
+        petChoice = name; randomDay.at = .distantPast
+        breedIndex = 0; gesture = .none
+        objectWillChange.send(); onExpandChange?()
+        if petKind.biped, let g = petKind.onMerge { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.doGesture(g) } }   // an entrance
+    }
+
     func setCostume(_ name: String) {
         UserDefaults.standard.set(name, forKey: "bit.costume")
         costume = name == "none" ? nil : name
