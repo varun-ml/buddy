@@ -23,6 +23,10 @@ extension Cat {
     @ViewBuilder func avatarBody(_ p: AvatarPose) -> some View {
         switch petKind.name {
         case "hero": heroAvatar(p)
+        case "ninja": ninjaAvatar(p)
+        case "wizard": wizardAvatar(p)
+        case "astronaut": astronautAvatar(p)
+        case "robot": robotAvatar(p)
         default: heroAvatar(p)
         }
     }
