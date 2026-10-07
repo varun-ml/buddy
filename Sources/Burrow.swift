@@ -4,7 +4,6 @@ import SwiftUI
 // MARK: Burrow, built to the approved mockup (round 2, direction 3): the scene IS the card's header
 
 /// Rows shown before "+ N more": three keeps every card short enough to fit above Buddy without scrolling.
-let listCap = 3
 let bClay = hex(0xd97757), bSage = hex(0x7fa77a), bSageInk = hex(0x5f8a5a), bInk = hex(0x3a2a1f), bSub = hex(0x8b7363)
 let bBtn = hex(0xf3e6d6), bBtnInk = hex(0x7a4a30), bChip = hex(0xf6ece0), bChipInk = hex(0x6a4a36)
 let bShadow = hex(0x784f28)
@@ -203,9 +202,9 @@ struct BurrowCard: View {
 
     // ---- Work
     var work: some View {
-        let pots = m.working.map { ($0, false) } + m.yourTurn.map { ($0, true) }
+        let pots = m.pots
         let shownPots = allPots ? pots : Array(pots.prefix(listCap))
-        let s = m.stats, quiet = m.draftRed.count + m.staleRed.count
+        let s = m.stats, quiet = m.ignoredRed.count
         let g = m.goal("today")
         return VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 6) {
@@ -225,23 +224,23 @@ struct BurrowCard: View {
                 ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 16).fill(Color.white)) }
                 ForEach(m.stuck) { st in
                     Button { activate(st) } label: {
-                        Text("⚠︎ \(st.repo ?? "?") quiet \(ago(Date().timeIntervalSince1970 - st.ts)) · last: \(st.activity ?? "")")
+                        Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · last: \(st.activity ?? "")")
                             .font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundColor(hex(0xc4542b)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 14).fill(hex(0xfdebd9)))
                     }.buttonStyle(.plain)
                 }
-                ForEach(shownPots, id: \.0.id) { p in
-                    Button { activate(p.0) } label: {
+                ForEach(shownPots, ) { p in
+                    Button { activate(p.s) } label: {
                         HStack(spacing: 10) {
-                            potIcon(p.0)
+                            potIcon(p.s)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(p.0.repo ?? "?").font(.system(size: 13, weight: .bold, design: .rounded)).lineLimit(1)
-                                Text((p.1 ? p.0.prompt : p.0.activity) ?? "").font(.system(size: 11, design: .monospaced)).foregroundColor(bSub).lineLimit(1)
+                                Text(p.s.repo ?? "?").font(.system(size: 13, weight: .bold, design: .rounded)).lineLimit(1)
+                                Text(p.line).font(.system(size: 11, design: .monospaced)).foregroundColor(bSub).lineLimit(1)
                             }
                             Spacer(minLength: 4)
-                            Text(p.1 ? "done \(ago(Date().timeIntervalSince1970 - p.0.ts))" : ago(Date().timeIntervalSince1970 - (p.0.turnStart ?? p.0.ts)))
-                                .font(.system(size: 11.5, weight: .bold, design: .rounded)).foregroundColor(p.1 ? bSageInk : bSub)
+                            Text(p.done ? "done \(p.age)" : p.age)
+                                .font(.system(size: 11.5, weight: .bold, design: .rounded)).foregroundColor(p.done ? bSageInk : bSub)
                         }.padding(.horizontal, 12).padding(.vertical, 7).background(RoundedRectangle(cornerRadius: 16).fill(Color.white))
                     }.buttonStyle(.plain)
                 }
@@ -257,7 +256,7 @@ struct BurrowCard: View {
 
             HStack(spacing: 8) {
                 if !statsRepos.isEmpty {
-                    tile("\(s.merged)", "merged", s.yesterdayMerged.map { d in let x = s.merged - d; return x > 0 ? "+\(x)" : nil } ?? nil)
+                    tile("\(s.merged)", "merged", s.gain)
                     tile("\(s.opened)", "opened", nil)
                 }
                 tile(hm(m.workedToday), "worked", nil)
@@ -266,15 +265,15 @@ struct BurrowCard: View {
 
             if !s.team.isEmpty {   // the team leaderboard: PRs merged
                 HStack(alignment: .top, spacing: 6) {
-                    ForEach(Array(s.team.prefix(3).enumerated()), id: \.offset) { i, r in
+                    ForEach(s.podium, id: \.medal) { r in
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("\(["🥇", "🥈", "🥉"][i]) \(r.n)").font(.system(size: 14, weight: .heavy, design: .rounded))
-                            Text(r.login == s.me ? "you" : r.login).font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundColor(r.login == s.me ? bClay : bSub).lineLimit(1).truncationMode(.middle)
+                            Text("\(r.medal) \(r.n)").font(.system(size: 14, weight: .heavy, design: .rounded))
+                            Text(r.who).font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundColor(r.me ? bClay : bSub).lineLimit(1).truncationMode(.middle)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(s.rank.map { "#\($0)" } ?? "–").font(.system(size: 14, weight: .heavy, design: .rounded)).foregroundColor(bClay)
+                        Text(s.rankText).font(.system(size: 14, weight: .heavy, design: .rounded)).foregroundColor(bClay)
                         Text("you · \(s.myCount)").font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundColor(bSub).lineLimit(1)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -310,7 +309,7 @@ struct BurrowCard: View {
                 if quiet > 0 { Button("\(quiet) red ignored") { m.showStale.toggle() }.buttonStyle(.plain).foregroundColor(bSub) }
             }.font(.system(size: 12, weight: .semibold, design: .rounded)).padding(.top, 10).padding(.horizontal, 4)
             if m.showStale {
-                ForEach(m.draftRed + m.staleRed) { pr in
+                ForEach(m.ignoredRed) { pr in
                     Button { NSWorkspace.shared.open(URL(string: pr.url)!) } label: {
                         Text("\(pr.short) · \(pr.title)").font(.system(size: 11, design: .rounded)).foregroundColor(bSub).lineLimit(1)
                     }.buttonStyle(.plain).padding(.horizontal, 4).padding(.top, 3)
@@ -334,7 +333,7 @@ struct BurrowCard: View {
         }
     }
     func potIcon(_ x: Session) -> some View {
-        let codex = (x.source ?? "").hasPrefix("codex")
+        let codex = x.isCodex
         return RoundedRectangle(cornerRadius: 11).fill(codex ? codexColor : bClay).frame(width: 30, height: 30)
             .overlay(Text(codex ? "Cx" : "Cl").font(.system(size: 11, weight: .heavy, design: .rounded)).foregroundColor(.white))
     }
@@ -488,7 +487,7 @@ struct BurrowWorkScene: View {
                         c.fill(Path(roundedRect: CGRect(x: 96, y: 112, width: 200, height: 6), cornerRadius: 3), with: .color(hex(0x6b4a36)))
                         for (i, s) in pots.enumerated() {
                             let x = pots.count == 1 ? 196 : 130 + CGFloat(i) * (132 / CGFloat(max(pots.count - 1, 1)))
-                            let col = (s.source ?? "").hasPrefix("codex") ? codexColor : bClay
+                            let col = s.isCodex ? codexColor : bClay
                             var g = c; g.translateBy(x: x, y: 104)
                             for (dx, delay) in [(-4.0, Double(i) * 0.6), (5.0, Double(i) * 0.6 + 1.1)] {
                                 let ph = ((t + delay).truncatingRemainder(dividingBy: 2.4)) / 2.4

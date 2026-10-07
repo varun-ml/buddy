@@ -122,7 +122,7 @@ struct InkCard: View {
         }
     }
     func grow(_ title: String, _ which: String) -> some View {
-        let g = m.goal(which), n = max(g?.n ?? 1, 1), k = g?.n == nil ? (g?.done == true ? 1 : 0) : g!.k
+        let g = m.goal(which), (k, n) = m.progress(which)
         return Button { g == nil ? DispatchQueue.main.async { m.setGoal(which) } : m.bump(which) } label: {
             HStack(spacing: 10) {
                 Text(title).font(.system(size: 12, weight: .medium)).foregroundColor(kSub).frame(width: 76, alignment: .leading)
@@ -165,8 +165,8 @@ struct InkCard: View {
 
     // ---- Work
     var work: some View {
-        let s = m.stats, quiet = m.draftRed.count + m.staleRed.count, g = m.goal("today")
-        let pots = m.working.map { ($0, false) } + m.yourTurn.map { ($0, true) }, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
+        let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
+        let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(m.waiting) { w in
                 Button { activate(w) } label: {
@@ -183,23 +183,23 @@ struct InkCard: View {
             lb("Running", "\(m.working.count)")
             ForEach(m.stuck) { st in
                 Button { activate(st) } label: {
-                    Text("⚠︎ \(st.repo ?? "?") quiet \(ago(Date().timeIntervalSince1970 - st.ts)) · \(st.activity ?? "")").font(.system(size: 12)).foregroundColor(hex(0xf2994a)).lineLimit(1).frame(height: 30, alignment: .leading)
+                    Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12)).foregroundColor(hex(0xf2994a)).lineLimit(1).frame(height: 30, alignment: .leading)
                 }.buttonStyle(.plain)
             }
-            ForEach(shown, id: \.0.id) { p in
-                let codex = (p.0.source ?? "").hasPrefix("codex"), c = codex ? codexColor : claudeColor
-                Button { activate(p.0) } label: {
+            ForEach(shown, ) { p in
+                let codex = p.s.isCodex, c = codex ? codexColor : claudeColor
+                Button { activate(p.s) } label: {
                     HStack(spacing: 10) {
-                        if p.1 { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundColor(kGreen).frame(width: 14, height: 14) }
+                        if p.done { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundColor(kGreen).frame(width: 14, height: 14) }
                         else {
                             ZStack { Circle().stroke(hex(0x2a2a30), lineWidth: 2); Circle().trim(from: 0, to: 0.25).stroke(c, style: StrokeStyle(lineWidth: 2, lineCap: .round)) }
                                 .frame(width: 12, height: 12).rotationEffect(.degrees(spin ? 360 : 0))
                         }
-                        Text(p.0.repo ?? "?").font(.system(size: 13, weight: .medium)).lineLimit(1).layoutPriority(1)
-                        Text((p.1 ? p.0.prompt : p.0.activity) ?? "").font(.system(size: 11.5, design: .monospaced)).foregroundColor(kDim).lineLimit(1)
+                        Text(p.s.repo ?? "?").font(.system(size: 13, weight: .medium)).lineLimit(1).layoutPriority(1)
+                        Text(p.line).font(.system(size: 11.5, design: .monospaced)).foregroundColor(kDim).lineLimit(1)
                         Spacer(minLength: 4)
                         Text(codex ? "Codex" : "Claude").font(.system(size: 10.5, weight: .medium)).foregroundColor(c).fixedSize().padding(.horizontal, 6).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 4).fill(c.opacity(0.12)))
-                        Text(p.1 ? "done" : ago(Date().timeIntervalSince1970 - (p.0.turnStart ?? p.0.ts))).font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(p.1 ? kGreen : kSub).fixedSize()
+                        Text(p.done ? "done" : p.age).font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(p.done ? kGreen : kSub).fixedSize()
                     }.frame(height: 34).padding(.horizontal, 6).contentShape(Rectangle())
                 }.buttonStyle(.plain).padding(.horizontal, -6)
             }
@@ -208,7 +208,7 @@ struct InkCard: View {
 
             HStack(spacing: 0) {
                 if !statsRepos.isEmpty {
-                    stat("\(s.merged)", "merged", s.yesterdayMerged.map { d in let x = s.merged - d; return x > 0 ? "+\(x)" : nil } ?? nil)
+                    stat("\(s.merged)", "merged", s.gain)
                     Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
                     stat("\(s.opened)", "opened", nil)
                     Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
@@ -220,14 +220,14 @@ struct InkCard: View {
 
             if !s.team.isEmpty {
                 HStack(spacing: 0) {
-                    ForEach(Array(s.team.prefix(3).enumerated()), id: \.offset) { i, r in
+                    ForEach(s.podium, id: \.medal) { r in
                         VStack(alignment: .leading, spacing: 1) {
-                            Text("\(["🥇", "🥈", "🥉"][i]) \(r.n)").font(.system(size: 13, weight: .semibold)).monospacedDigit()
-                            Text(r.login == s.me ? "you" : r.login).font(.system(size: 11)).foregroundColor(kSub).lineLimit(1).truncationMode(.middle)
+                            Text("\(r.medal) \(r.n)").font(.system(size: 13, weight: .semibold)).monospacedDigit()
+                            Text(r.who).font(.system(size: 11)).foregroundColor(kSub).lineLimit(1).truncationMode(.middle)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(s.rank.map { "#\($0)" } ?? "–").font(.system(size: 13, weight: .semibold)).foregroundColor(kIndigo)
+                        Text(s.rankText).font(.system(size: 13, weight: .semibold)).foregroundColor(kIndigo)
                         Text("you · \(s.myCount)").font(.system(size: 11)).foregroundColor(kSub).lineLimit(1)
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.padding(.top, 12).help("PRs merged by the team: \(s.teamTotal) in all")
@@ -256,7 +256,7 @@ struct InkCard: View {
                 if quiet > 0 { Button("\(quiet) red ignored") { m.showStale.toggle() }.buttonStyle(.plain) }
             }.font(.system(size: 12)).foregroundColor(kSub).padding(.top, 10).frame(maxWidth: .infinity).overlay(Rectangle().fill(kLine).frame(height: 1), alignment: .top).padding(.top, 12)
             if m.showStale {
-                ForEach(m.draftRed + m.staleRed) { pr in
+                ForEach(m.ignoredRed) { pr in
                     Button { NSWorkspace.shared.open(URL(string: pr.url)!) } label: { Text("\(pr.short) · \(pr.title)").font(.system(size: 11)).foregroundColor(kSub).lineLimit(1) }.buttonStyle(.plain).padding(.top, 3)
                 }
             }

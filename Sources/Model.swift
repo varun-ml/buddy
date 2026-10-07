@@ -550,10 +550,10 @@ final class Model: ObservableObject {
             let name = s.repo ?? "A session"
             if prev != nil, prev != s.state {
                 if s.state == "waiting" {
-                    say("\((s.source ?? "").hasPrefix("codex") ? "◆ " : "")\(name) wants your OK\n\(s.activity ?? "")", .waiting, seconds: 25, action: { activate(s) })
+                    say("\(s.isCodex ? "◆ " : "")\(name) wants your OK\n\(s.activity ?? "")", .waiting, seconds: 25, action: { activate(s) })
                 } else if s.state == "finished", prev == "working" {
                     let took = s.turnStart.map { " in \(ago(now - $0))" } ?? ""
-                    let mark = (s.source ?? "").hasPrefix("codex") ? "◆ " : ""
+                    let mark = s.isCodex ? "◆ " : ""
                     say("\(mark)\(name) is done\(took). Tap to open ✨\n\(s.said ?? s.prompt ?? "")", .happy, seconds: 15, sound: "Pop", action: { activate(s) })
                 }
             }

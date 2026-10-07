@@ -118,7 +118,7 @@ struct GlassCard: View {
         }
     }
     func ringTile(_ title: String, _ which: String, _ c: Color, _ track: Color) -> some View {
-        let g = m.goal(which), n = g?.n ?? 1, k = g?.n == nil ? (g?.done == true ? 1 : 0) : g!.k
+        let g = m.goal(which), (k, n) = m.progress(which)
         return Button { g == nil ? DispatchQueue.main.async { m.setGoal(which) } : m.bump(which) } label: {
             VStack(alignment: .leading, spacing: 0) {
                 lab(title)
@@ -166,8 +166,8 @@ struct GlassCard: View {
 
     // ---- Work
     var work: some View {
-        let s = m.stats, quiet = m.draftRed.count + m.staleRed.count, g = m.goal("today")
-        let pots = m.working.map { ($0, false) } + m.yourTurn.map { ($0, true) }, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
+        let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
+        let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 10) {
             ForEach(m.waiting) { w in
                 Button { activate(w) } label: {
@@ -185,7 +185,7 @@ struct GlassCard: View {
             ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.55))) }
             HStack(spacing: 8) {
                 if !statsRepos.isEmpty {
-                    num("\(s.merged)", "merged", s.yesterdayMerged.map { d in let x = s.merged - d; return x > 0 ? "+\(x)" : nil } ?? nil)
+                    num("\(s.merged)", "merged", s.gain)
                     num("\(s.opened)", "opened", nil)
                 }
                 num(hm(m.workedToday), "worked", nil)
@@ -195,24 +195,24 @@ struct GlassCard: View {
                 VStack(spacing: 0) {
                     ForEach(m.stuck) { st in
                         Button { activate(st) } label: {
-                            Text("⚠︎ \(st.repo ?? "?") quiet \(ago(Date().timeIntervalSince1970 - st.ts)) · \(st.activity ?? "")").font(.system(size: 12, weight: .medium)).foregroundColor(hex(0xe8590c)).lineLimit(1)
+                            Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12, weight: .medium)).foregroundColor(hex(0xe8590c)).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6).padding(.vertical, 7)
                         }.buttonStyle(.plain)
                     }
-                    ForEach(shown, id: \.0.id) { p in
-                        Button { activate(p.0) } label: {
+                    ForEach(shown, ) { p in
+                        Button { activate(p.s) } label: {
                             HStack(spacing: 10) {
-                                appIcon(p.0)
+                                appIcon(p.s)
                                 VStack(alignment: .leading, spacing: 1) {
                                     HStack(spacing: 5) {
-                                        Text(p.0.repo ?? "?").font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                                        if !p.1 { Circle().fill(gGreen).frame(width: 6, height: 6) }
+                                        Text(p.s.repo ?? "?").font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                                        if !p.done { Circle().fill(gGreen).frame(width: 6, height: 6) }
                                     }
-                                    Text((p.1 ? p.0.prompt : p.0.activity) ?? "").font(.system(size: 11, design: .monospaced)).foregroundColor(gSub).lineLimit(1)
+                                    Text(p.line).font(.system(size: 11, design: .monospaced)).foregroundColor(gSub).lineLimit(1)
                                 }
                                 Spacer(minLength: 4)
-                                Text(p.1 ? "done \(ago(Date().timeIntervalSince1970 - p.0.ts))" : ago(Date().timeIntervalSince1970 - (p.0.turnStart ?? p.0.ts)))
-                                    .font(.system(size: 12, weight: .medium)).monospacedDigit().foregroundColor(p.1 ? hex(0x248a3d) : gSub)
+                                Text(p.done ? "done \(p.age)" : p.age)
+                                    .font(.system(size: 12, weight: .medium)).monospacedDigit().foregroundColor(p.done ? hex(0x248a3d) : gSub)
                             }.padding(.horizontal, 6).padding(.vertical, 7).contentShape(Rectangle())
                         }.buttonStyle(.plain)
                     }
@@ -222,14 +222,14 @@ struct GlassCard: View {
             if !s.team.isEmpty {
                 plat(10) {
                     HStack(alignment: .top, spacing: 6) {
-                        ForEach(Array(s.team.prefix(3).enumerated()), id: \.offset) { i, r in
+                        ForEach(s.podium, id: \.medal) { r in
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("\(["🥇", "🥈", "🥉"][i]) \(r.n)").font(.system(size: 15, weight: .semibold))
-                                Text(r.login == s.me ? "you" : r.login).font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1).truncationMode(.middle)
+                                Text("\(r.medal) \(r.n)").font(.system(size: 15, weight: .semibold))
+                                Text(r.who).font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1).truncationMode(.middle)
                             }.frame(maxWidth: .infinity, alignment: .leading)
                         }
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(s.rank.map { "#\($0)" } ?? "–").font(.system(size: 15, weight: .semibold)).foregroundColor(gBlue)
+                            Text(s.rankText).font(.system(size: 15, weight: .semibold)).foregroundColor(gBlue)
                             Text("you · \(s.myCount)").font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1)
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -264,7 +264,7 @@ struct GlassCard: View {
                 if quiet > 0 { Button("\(quiet) red PRs ignored") { m.showStale.toggle() }.buttonStyle(.plain) }
             }.font(.system(size: 12, weight: .medium)).foregroundColor(gSub.opacity(1.15)).padding(.horizontal, 4)
             if m.showStale {
-                ForEach(m.draftRed + m.staleRed) { pr in
+                ForEach(m.ignoredRed) { pr in
                     Button { NSWorkspace.shared.open(URL(string: pr.url)!) } label: { Text("\(pr.short) · \(pr.title)").font(.system(size: 11)).foregroundColor(gSub).lineLimit(1) }.buttonStyle(.plain).padding(.horizontal, 4)
                 }
             }
@@ -282,7 +282,7 @@ struct GlassCard: View {
         }
     }
     func appIcon(_ x: Session) -> some View {
-        let codex = (x.source ?? "").hasPrefix("codex")
+        let codex = x.isCodex
         return RoundedRectangle(cornerRadius: 8).fill(LinearGradient(colors: codex ? [hex(0x1fc79c), hex(0x0e8f6f)] : [hex(0xe8906f), hex(0xc9643f)], startPoint: .topLeading, endPoint: .bottomTrailing))
             .frame(width: 28, height: 28).overlay(Text(codex ? ">_" : "✳").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.white))
     }

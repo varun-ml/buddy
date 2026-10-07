@@ -27,6 +27,38 @@ let themes: [String: Theme] = [
 /// The current theme. A global because every card view reads it; Model.themeName republishes on change.
 var T = themes[UserDefaults.standard.string(forKey: "bit.theme") ?? (config["theme"] as? String ?? "ink")] ?? themes["ink"]!
 
+// MARK: what every card shows, shaped once. A theme decides only how it looks.
+
+let listCap = 3   // rows per list before "+ N more", so the card never scrolls
+
+/// A session row: running, or finished in the last hour (your turn).
+struct Pot: Identifiable {
+    let s: Session, done: Bool
+    var id: String { s.id }
+    var line: String { (done ? s.prompt : s.activity) ?? "" }
+    /// How long it has run, or how long ago it finished.
+    var age: String { ago(Date().timeIntervalSince1970 - (done ? s.ts : s.turnStart ?? s.ts)) }
+}
+extension Session {
+    var isCodex: Bool { (source ?? "").hasPrefix("codex") }
+    var quietFor: String { ago(Date().timeIntervalSince1970 - ts) }
+}
+extension Model {
+    var pots: [Pot] { working.map { Pot(s: $0, done: false) } + yourTurn.map { Pot(s: $0, done: true) } }
+    var ignoredRed: [PR] { draftRed + staleRed }
+    /// Goal progress as k of n; a yes/no goal counts as 0 or 1 of 1.
+    func progress(_ which: String) -> (k: Int, n: Int) {
+        let g = goal(which)
+        return g?.n == nil ? (g?.done == true ? 1 : 0, 1) : (g!.k, max(g!.n!, 1))
+    }
+}
+extension Stats {
+    /// "+2" when you've merged more than yesterday.
+    var gain: String? { yesterdayMerged.flatMap { d in merged - d > 0 ? "+\(merged - d)" : nil } }
+    var podium: [(medal: String, n: Int, who: String, me: Bool)] { team.prefix(3).enumerated().map { (["🥇", "🥈", "🥉"][$0], $1.n, $1.login == me ? "you" : $1.login, $1.login == me) } }
+    var rankText: String { rank.map { "#\($0)" } ?? "–" }
+}
+
 /// Frosted glass needs the real desktop behind the window, so it is an NSVisualEffectView, not a SwiftUI material.
 struct Frost: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {

@@ -60,7 +60,7 @@ struct LitterView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
             ForEach(Array(m.waiting.enumerated()), id: \.element.id) { i, s in
-                Kitten(breed: breeds[(i + 2) % breeds.count], asleep: Date().timeIntervalSince1970 - s.ts > 600, codex: (s.source ?? "").hasPrefix("codex"))
+                Kitten(breed: breeds[(i + 2) % breeds.count], asleep: Date().timeIntervalSince1970 - s.ts > 600, codex: s.isCodex)
                     .help("\(s.repo ?? "A session") is waiting for your OK · \(ago(Date().timeIntervalSince1970 - s.ts))\n\(s.activity ?? "")\nclick to go to Claude")
                     .onTapGesture { activate(s) }
             }
