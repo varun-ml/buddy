@@ -1,0 +1,144 @@
+{
+ "stoic": [
+  [
+   "You have power over your mind, not outside events. Realize this, and you will find strength.",
+   "Marcus Aurelius"
+  ],
+  [
+   "The impediment to action advances action. What stands in the way becomes the way.",
+   "Marcus Aurelius"
+  ],
+  [
+   "Waste no more time arguing what a good man should be. Be one.",
+   "Marcus Aurelius"
+  ],
+  [
+   "If it is not right, do not do it; if it is not true, do not say it.",
+   "Marcus Aurelius"
+  ],
+  [
+   "The happiness of your life depends upon the quality of your thoughts.",
+   "Marcus Aurelius"
+  ],
+  [
+   "Do every act of your life as though it were the very last act of your life.",
+   "Marcus Aurelius"
+  ],
+  [
+   "Very little is needed to make a happy life; it is all within yourself, in your way of thinking.",
+   "Marcus Aurelius"
+  ],
+  [
+   "When you arise in the morning, think of what a precious privilege it is to be alive.",
+   "Marcus Aurelius"
+  ],
+  [
+   "The best revenge is to be unlike him who performed the injury.",
+   "Marcus Aurelius"
+  ],
+  [
+   "Confine yourself to the present.",
+   "Marcus Aurelius"
+  ],
+  [
+   "Begin at once to live.",
+   "Seneca"
+  ],
+  [
+   "We suffer more often in imagination than in reality.",
+   "Seneca"
+  ],
+  [
+   "It is not that we have a short time to live, but that we waste a lot of it.",
+   "Seneca"
+  ],
+  [
+   "While we are postponing, life speeds by.",
+   "Seneca"
+  ],
+  [
+   "Difficulties strengthen the mind, as labor does the body.",
+   "Seneca"
+  ],
+  [
+   "He who is everywhere is nowhere.",
+   "Seneca"
+  ],
+  [
+   "No man was ever wise by chance.",
+   "Seneca"
+  ],
+  [
+   "It is not the man who has too little, but the man who craves more, who is poor.",
+   "Seneca"
+  ],
+  [
+   "Wealth consists not in having great possessions, but in having few wants.",
+   "Epictetus"
+  ],
+  [
+   "First say to yourself what you would be; and then do what you have to do.",
+   "Epictetus"
+  ],
+  [
+   "It's not what happens to you, but how you react to it that matters.",
+   "Epictetus"
+  ],
+  [
+   "No man is free who is not master of himself.",
+   "Epictetus"
+  ],
+  [
+   "Make the best use of what is in your power, and take the rest as it happens.",
+   "Epictetus"
+  ],
+  [
+   "If you want to improve, be content to be thought foolish and stupid.",
+   "Epictetus"
+  ],
+  [
+   "Only the educated are free.",
+   "Epictetus"
+  ],
+  [
+   "Seek not that events should happen as you wish, but wish them to happen as they do, and you will go on well.",
+   "Epictetus"
+  ],
+  [
+   "Circumstances don't make the man, they only reveal him to himself.",
+   "Epictetus"
+  ],
+  [
+   "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has.",
+   "Epictetus"
+  ]
+ ],
+ "socratic_quotes": [
+  [
+   "The unexamined life is not worth living.",
+   "Socrates"
+  ],
+  [
+   "I know that I know nothing.",
+   "Socrates"
+  ],
+  [
+   "Wonder is the beginning of wisdom.",
+   "Socrates"
+  ]
+ ],
+ "socratic_questions": [
+  "What would have to be true for {pr} to be done today?",
+  "Is {pr} failing because the code is wrong, or because the check is?",
+  "If you could ship only one thing before you stop today, which one, and why that one?",
+  "{merged} merged today. Which of them will still matter in a month?",
+  "What are you assuming about {repo} that you haven't checked?",
+  "You have {sessions} sessions going. Which one actually needs you right now?",
+  "What did you learn today that you didn't know this morning?",
+  "If a new engineer read your last PR, what question would they ask first?",
+  "What's the smallest change that would make tomorrow easier?",
+  "Which of your open PRs are you avoiding, and what is it telling you?",
+  "Would you merge this if someone else had written it?",
+  "What would you cut if you had half the time?"
+ ]
+}

@@ -1,0 +1,12 @@
+# built by install.sh
+/Buddy
+/lift
+# local media and backups
+*.mp4
+/dance/
+*.bak*
+.DS_Store
+favorites.md
+# personal files live in ~/.config/buddy/, never here
+life.json
+tasks.md

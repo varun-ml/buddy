@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""buddy: start Buddy, or let any agent tell you something through it.
+
+  buddy                         start Buddy again (after right-click → Close Buddy)
+  buddy say "text" [--urgent]   show a bubble; tapping it opens the session in this folder
+                                --urgent: waiting-for-you sound, and it jumps the queue
+"""
+import json, os, subprocess, sys, time
+
+args = sys.argv[1:]
+if not args:
+    subprocess.run(['launchctl', 'kickstart', f'gui/{os.getuid()}/com.buddy-pet.buddy'])
+    sys.exit()
+if args[0] != 'say' or len(args) < 2:
+    print(__doc__); sys.exit(2)
+urgent = '--urgent' in args
+text = ' '.join(a for a in args[1:] if a != '--urgent').strip()[:300]
+if not text:
+    print(__doc__); sys.exit(2)
+inbox = os.path.expanduser('~/.claude/pet/inbox')
+os.makedirs(inbox, exist_ok=True)
+path = os.path.join(inbox, f'{time.time():.3f}-{os.getpid()}.json')
+with open(path + '.tmp', 'w') as f:
+    json.dump({'text': text, 'urgent': urgent, 'cwd': os.getcwd(), 'ts': time.time()}, f)
+os.replace(path + '.tmp', path)   # Buddy reads it within 2 s; it keeps for 2 h if Buddy is closed
+print('Buddy will show it.')
