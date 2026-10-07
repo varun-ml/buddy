@@ -406,7 +406,6 @@ final class Model: ObservableObject {
         let prevMerged = stats.merged
         stats = s
         statsLoaded = true
-        mergedToday = s.merged
         if first && Calendar.current.component(.hour, from: Date()) >= 6 && Day.once("greeted") {
             let y = s.yesterdayMerged.map { "Yesterday you merged \($0)." } ?? ""
             say("Morning! \(y)\n\(todayQuote[0])", .happy, seconds: 12, kind: .quote, byline: "— \(todayQuote[1])", pose: .glasses)
