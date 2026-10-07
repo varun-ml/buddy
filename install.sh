@@ -80,7 +80,7 @@ echo "pet: $(cat "$HOME/.config/buddy.json")"
 
 # 2. build (from source, on your Mac: nothing is downloaded)
 echo "building… (about a minute the first time)"
-swiftc -swift-version 5 -O -suppress-warnings "$DIR/Buddy.swift" -o "$DIR/Buddy"
+swiftc -swift-version 5 -O -suppress-warnings "$DIR"/Sources/*.swift -o "$DIR/Buddy"
 chmod +x "$DIR/beat.py" "$DIR/buddy-cli"
 
 # 2b. optional dance clip: ~/.config/buddy/dance.mp4 → transparent frames in ~/.config/buddy/dance (pug only, macOS 14+)
