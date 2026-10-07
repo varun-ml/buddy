@@ -280,31 +280,58 @@ final class Model: ObservableObject {
         return mergedToday > 0 ? "All clear. \(mergedToday) merged today" : "All clear"
     }
 
+    /// Events wait here while you nap, the card is open, or another alert is up. Nothing that happened is dropped;
+    /// chatter (quotes, thoughts) is, because it is only worth saying now.
+    private var waitingToSay: [(b: Bubble, seconds: Double, pose: Pose, at: Date)] = []
+
     func say(_ text: String, _ tone: Mood, seconds: Double = 10, kind: BubbleKind = .event, byline: String? = nil,
              pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, action: (() -> Void)? = nil) {
-        if snoozed && tone != .happy { return }
-        if squatting && kind != .event { return }
-        if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
-        // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
-        if kind == .event && tone == .happy { dance() }
-        if isBear && kind == .event && tone == .upset { doGesture(.roar) }   // a red PR gets roared at
-        if isBear && kind == .event && tone == .happy { doGesture(.fish) }   // a merge gets a salmon
-        if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
-        if showCard { if tone == .happy { celebrate += 1 }; return }
-        bubble = Bubble(text: text, tone: tone, kind: kind, byline: byline, action: action, react: react)
-        said[text] = Date()
-        if kind == .quote || kind == .thought {
-            history.insert(bubble!, at: 0)
+        let napping = snoozed && tone != .happy
+        if (napping || squatting) && kind != .event { return }
+        if !napping {
+            if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
+            // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
+            if kind == .event && tone == .happy { dance() }
+            if isBear && kind == .event && tone == .upset { doGesture(.roar) }   // a red PR gets roared at
+            if isBear && kind == .event && tone == .happy { doGesture(.fish) }   // a merge gets a salmon
+            if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
+            if showCard && tone == .happy { celebrate += 1 }
+        }
+        let b = Bubble(text: text, tone: tone, kind: kind, byline: byline, action: action, react: react)
+        if kind == .event && (napping || showCard || bubble?.kind == .event) {
+            waitingToSay.removeAll { $0.b.text == text }
+            let item = (b: b, seconds: seconds, pose: pose, at: Date())
+            if tone == .waiting || tone == .upset { waitingToSay.insert(item, at: 0) } else { waitingToSay.append(item) }   // needs-you first
+            if waitingToSay.count > 5 { waitingToSay.removeLast() }   // ponytail: cap 5; a burst beyond that is better read in the card
+            return
+        }
+        if showCard { return }   // chatter never covers the card
+        show(b, seconds: seconds, pose: pose)
+    }
+
+    /// The next waiting event, once nothing is in the way. Called every 2 s; older than 15 min is old news.
+    func sayNext() {
+        waitingToSay.removeAll { Date().timeIntervalSince($0.at) > 15 * 60 }
+        guard !snoozed, !showCard, bubble == nil, !waitingToSay.isEmpty else { return }
+        let w = waitingToSay.removeFirst()
+        show(w.b, seconds: w.seconds, pose: w.pose)
+    }
+
+    private func show(_ b: Bubble, seconds: Double, pose: Pose) {
+        bubble = b
+        said[b.text] = Date()
+        if b.kind == .quote || b.kind == .thought {
+            history.insert(b, at: 0)
             if history.count > 60 { history.removeLast() }
         }
         if let h = FileHandle(forWritingAtPath: "/tmp/buddy.said.log") ?? { FileManager.default.createFile(atPath: "/tmp/buddy.said.log", contents: nil); return FileHandle(forWritingAtPath: "/tmp/buddy.said.log") }() {
             h.seekToEndOfFile()
-            h.write("\(ISO8601DateFormatter().string(from: Date())) [\(kind)] \(text.replacingOccurrences(of: "\n", with: " / "))\n".data(using: .utf8)!)
+            h.write("\(ISO8601DateFormatter().string(from: Date())) [\(b.kind)] \(b.text.replacingOccurrences(of: "\n", with: " / "))\n".data(using: .utf8)!)
             h.closeFile()
         }
         self.pose = pose
-        if kind == .event && (tone == .upset || tone == .waiting) { shake += 1 }
-        if tone == .happy { celebrate += 1 }
+        if b.kind == .event && (b.tone == .upset || b.tone == .waiting) { shake += 1 }
+        if b.tone == .happy { celebrate += 1 }
         onExpandChange?()
         bubbleTimer?.invalidate()
         bubbleTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
@@ -545,6 +572,7 @@ final class Model: ObservableObject {
         }
         out.sort { $0.ts > $1.ts }
         readInbox(out)
+        sayNext()
         for s in out {
             let prev = lastStates[s.id]
             let name = s.repo ?? "A session"
@@ -649,7 +677,7 @@ final class Model: ObservableObject {
     func continueSession(_ pr: PR) {
         guard let s = details[pr.id]?.session else { return }
         guard FileManager.default.fileExists(atPath: s.cwd) else {
-            copy(fixPrompt(pr)); say("That session's folder is gone\nI copied the fix prompt instead 📋", .waiting, seconds: 8); return
+            copy(fixPrompt(pr)); say("That session's folder is gone\nI copied the fix prompt instead 📋", .waiting, seconds: 8, kind: .ambient); return
         }
         let tag = UUID().uuidString.prefix(8)
         let promptFile = "/tmp/bit-prompt-\(tag).txt", script = "/tmp/bit-continue-\(tag).sh"
@@ -660,7 +688,7 @@ final class Model: ObservableObject {
         try? body.write(toFile: script, atomically: true, encoding: .utf8)
         let osa = "tell application \"Terminal\"\n do script \"bash \(script)\"\n activate\nend tell"
         DispatchQueue.global().async { run("/usr/bin/osascript", ["-e", osa]) }
-        say("Reopening that session in Terminal 🐾", .happy, seconds: 5)
+        say("Reopening that session in Terminal 🐾", .happy, seconds: 5, kind: .ambient)
     }
 
     func copy(_ text: String) {

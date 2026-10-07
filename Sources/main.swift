@@ -22,6 +22,13 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let old = try! JSONDecoder().decode(Life.self, from: #"{"me":"x","people":[{"name":"A","relation":"child"}],"horizons":{"today":{"text":"t","set":"2026-10-06"}}}"#.data(using: .utf8)!)
     precondition(old.people.count == 1 && old.liked.isEmpty && old.horizons?.today?.k == 0)
     precondition(hm(400 * 60) == "6h40" && hm(35 * 60) == "35m" && hm(60 * 60) == "1h00")
+    let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
+    q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
+    q.showCard = false; q.sayNext(); precondition(q.bubble?.text == "selftest a")
+    q.say("selftest b", .calm); precondition(q.bubble?.text == "selftest a")
+    q.bubble = nil; q.snoozedUntil = Date().addingTimeInterval(60); q.sayNext(); precondition(q.bubble == nil)
+    q.snoozedUntil = nil; q.sayNext(); precondition(q.bubble?.text == "selftest b")
+    q.bubble = nil; q.sayNext(); precondition(q.bubble == nil)
     print("selftest ok"); exit(0)
 }
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {

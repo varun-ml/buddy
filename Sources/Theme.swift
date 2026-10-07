@@ -119,7 +119,7 @@ struct PRBlock: View {
                 if d?.session != nil {
                     Chip(label: "▶ Continue that session", primary: true) { m.continueSession(pr) }
                 } else {
-                    Chip(label: "Copy fix prompt", primary: true) { m.copy(m.fixPrompt(pr)); m.say("Fix prompt copied 📋", .calm, seconds: 4) }
+                    Chip(label: "Copy fix prompt", primary: true) { m.copy(m.fixPrompt(pr)); m.say("Fix prompt copied 📋", .calm, seconds: 4, kind: .ambient) }
                 }
                 Chip(label: "Open PR") { NSWorkspace.shared.open(URL(string: pr.url)!) }
                 Chip(label: m.busyAction == pr.id ? "Rerunning…" : "Rerun") { m.rerunFailed(pr) }
