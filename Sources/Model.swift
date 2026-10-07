@@ -562,6 +562,7 @@ final class Model: ObservableObject {
             let p = (sessionsDir as NSString).appendingPathComponent(f)
             guard let data = fm.contents(atPath: p), let s = try? JSONDecoder().decode(Session.self, from: data) else { continue }
             if now - s.ts > forgetAfter { try? fm.removeItem(atPath: p); continue }
+            if let c = s.cwd, !c.isEmpty, !fm.fileExists(atPath: c) { try? fm.removeItem(atPath: p); continue }   // its folder is gone (a deleted worktree): it can never finish
             out.append(s)
         }
         // Codex threads with no typed prompt (automations like "Guardian review") show their thread title
