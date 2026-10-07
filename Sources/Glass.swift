@@ -31,7 +31,7 @@ struct GlassCard: View {
     var header: some View {
         HStack(spacing: 9) {
             Circle().fill(LinearGradient(colors: [hex(0xf3a877), hex(0xd9764f)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 28, height: 28)
-                .overlay(Text(isBear ? "🐻" : isPug ? "🐶" : "🐱").font(.system(size: 15))).shadow(color: hex(0xd9764f).opacity(0.4), radius: 3, y: 2)
+                .overlay(Text(petKind.emoji).font(.system(size: 15))).shadow(color: hex(0xd9764f).opacity(0.4), radius: 3, y: 2)
             VStack(alignment: .leading, spacing: 0) {
                 Text("Buddy").font(.system(size: 14, weight: .semibold))
                 Text(m.waiting.isEmpty ? (m.working.isEmpty ? "all quiet" : "\(m.working.count) session\(m.working.count == 1 ? "" : "s") cooking") : "\(m.waiting.count) waiting for you")

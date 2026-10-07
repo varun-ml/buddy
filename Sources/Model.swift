@@ -77,7 +77,7 @@ final class Model: ObservableObject {
     private var lastDance = Date.distantPast
     /// Play the dance clip once; at most once a minute so a busy hour isn't one long dance.
     func dance() {
-        guard isPug, !danceFrames.isEmpty, !squatting, Date().timeIntervalSince(lastDance) > 60 else { return }
+        guard petKind.dances, !danceFrames.isEmpty, !squatting, Date().timeIntervalSince(lastDance) > 60 else { return }
         lastDance = Date()
         let secs = Double(danceFrames.count) / 15
         dancingUntil = Date().addingTimeInterval(secs)
@@ -153,14 +153,13 @@ final class Model: ObservableObject {
         breedIndex = (breedIndex + 1) % breeds.count
         UserDefaults.standard.set(breedIndex, forKey: "bit.breed")
         hearts += 1
-        if !quiet { say("I'm a \(breed.name) now \(isBear ? "🐻" : isPug ? "🐶" : "😼")", .happy, seconds: 3, kind: .ambient) }
+        if !quiet { say("I'm a \(breed.name) now \(petKind.hello)", .happy, seconds: 3, kind: .ambient) }
     }
 
     /// A little bit of business: stretch, yawn, chase tail, wash, loaf, sneeze, zoomies, knock something off, hop.
     /// Bears: rear up and roar, eat honey, swipe a fish out of the air, scratch their back.
     func doGesture(_ g: Gesture? = nil) {
-        let pick = g ?? (isBear ? [Gesture.stretch, .yawn, .loaf, .sneeze, .zoomies, .hop, .roar, .roar, .honey, .fish, .scratch]
-            : [Gesture.stretch, .yawn, .spin, .wash, .loaf, .sneeze, .zoomies, .knock, .hop] + (drip ? [.shimmy, .shimmy] : [])).randomElement()!
+        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : [])).randomElement()!
         gesture = pick
         gestureAt = Date()
         if pick == .zoomies { zoomies = true }
@@ -292,8 +291,8 @@ final class Model: ObservableObject {
             if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
             // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
             if kind == .event && tone == .happy { dance() }
-            if isBear && kind == .event && tone == .upset { doGesture(.roar) }   // a red PR gets roared at
-            if isBear && kind == .event && tone == .happy { doGesture(.fish) }   // a merge gets a salmon
+            if kind == .event && tone == .upset, let g = petKind.onRed { doGesture(g) }     // a bear roars at a red PR
+            if kind == .event && tone == .happy, let g = petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
             if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
             if showCard && tone == .happy { celebrate += 1 }
         }

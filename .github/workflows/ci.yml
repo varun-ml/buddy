@@ -26,6 +26,7 @@ jobs:
           from PIL import Image, ImageChops
           print("| view | change |\n|---|---|")
           for f in sorted(os.listdir("snapshots/after")):
+              if not os.path.exists(f"snapshots/before/{f}"): print(f"| {f} | new |"); continue
               a, b = Image.open(f"snapshots/before/{f}").convert("RGBA"), Image.open(f"snapshots/after/{f}").convert("RGBA")
               if a.size != b.size: print(f"| {f} | size {a.size} → {b.size} |"); continue
               n = sum(1 for v in ImageChops.difference(a, b).convert("L").getdata() if v > 24)

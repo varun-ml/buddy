@@ -135,4 +135,4 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 
 Built by Varun Tulsian with Claude Code. The bear 🐻 is by [Siddharth Sahu](https://github.com/siddharth-meraki).
 
-Want to add a pet, a theme or a fix? See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.
+Want Buddy to work with your agent (Cursor, Gemini CLI, …), or to add a pet, a theme or a fix? See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed.

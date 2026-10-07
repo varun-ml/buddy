@@ -180,10 +180,8 @@ var randomDay = (at: Date.distantPast, pet: "cat")
 /// Test seams for --snapshot: one pet, and a stopped clock so breathing and blinking draw the same every run.
 var forcedPet: String?
 var frozenTime: Double?
-var isBear: Bool { pet == "bear" }
-var isPug: Bool { pet == "pug" }
-/// Sunglasses, tracksuit and sneakers. Pugs wear it unless buddy.json says "outfit": "none".
-var drip: Bool { isPug && (config["outfit"] as? String ?? "drip") == "drip" }
+/// Sunglasses, tracksuit and sneakers, for pets that have them, unless buddy.json says "outfit": "none".
+var drip: Bool { petKind.outfit && (config["outfit"] as? String ?? "drip") == "drip" }
 /// A celebration dance: transparent PNG frames in ~/.config/buddy/dance (install.sh makes them from ~/.config/buddy/dance.mp4).
 let danceFrames: [NSImage] = {
     let dir = (NSHomeDirectory() as NSString).appendingPathComponent(".config/buddy/dance")

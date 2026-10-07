@@ -367,18 +367,7 @@ struct ScenePet: View {
             c.fill(Path(ellipseIn: CGRect(x: -12, y: -17.5, width: 24, height: 17)), with: .color(fur))
             c.fill(Path(ellipseIn: CGRect(x: -4, y: -10, width: 12, height: 8)), with: .color(hex(0xfbe2cd)))
             c.fill(Path(ellipseIn: CGRect(x: 1, y: -28, width: 16, height: 16)), with: .color(fur))
-            if isBear {
-                c.fill(Path(ellipseIn: CGRect(x: 1, y: -31, width: 6, height: 6)), with: .color(fur))
-                c.fill(Path(ellipseIn: CGRect(x: 11, y: -31, width: 6, height: 6)), with: .color(fur))
-            } else if isPug {
-                c.fill(Path(ellipseIn: CGRect(x: 0, y: -28, width: 5, height: 8)), with: .color(dark))
-                c.fill(Path(ellipseIn: CGRect(x: 13, y: -28, width: 5, height: 8)), with: .color(dark))
-            } else {
-                var ears = Path()
-                ears.move(to: CGPoint(x: 3, y: -25)); ears.addLine(to: CGPoint(x: 4, y: -32)); ears.addLine(to: CGPoint(x: 9, y: -28)); ears.closeSubpath()
-                ears.move(to: CGPoint(x: 15, y: -25)); ears.addLine(to: CGPoint(x: 14, y: -32)); ears.addLine(to: CGPoint(x: 9, y: -28)); ears.closeSubpath()
-                c.fill(ears, with: .color(fur))
-            }
+            petKind.sceneEars(&c, fur, dark)
             let eye = hex(0x3a1f12)
             c.fill(Path(ellipseIn: CGRect(x: 5.3, y: -21.7, width: 2.4, height: 2.4)), with: .color(eye))
             c.fill(Path(ellipseIn: CGRect(x: 10.8, y: -21.7, width: 2.4, height: 2.4)), with: .color(eye))

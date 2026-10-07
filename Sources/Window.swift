@@ -79,19 +79,9 @@ struct Kitten: View {
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             ZStack {
                 Ellipse().fill(breed.fur).frame(width: 26, height: 15).position(x: 15, y: 33)
-                if isBear {
-                    ForEach([7.0, 23.0], id: \.self) { x in Circle().fill(breed.points ?? breed.fur).frame(width: 8, height: 8).position(x: x, y: 9) }
-                } else if !isPug {
-                    Tri(a: CGPoint(x: 6, y: 12), b: CGPoint(x: 7, y: 2), c: CGPoint(x: 13, y: 8)).fill(breed.points ?? breed.fur)
-                    Tri(a: CGPoint(x: 17, y: 8), b: CGPoint(x: 23, y: 2), c: CGPoint(x: 24, y: 12)).fill(breed.points ?? breed.fur)
-                }
+                petKind.kittenEars(breed)
                 Circle().fill(breed.fur).frame(width: 20, height: 19).position(x: 15, y: 17)
-                if isBear { Ellipse().fill(breed.belly).frame(width: 10, height: 7).position(x: 15, y: 21) }
-                if isPug, let mk = breed.mask {
-                    Tri(a: CGPoint(x: 4, y: 11), b: CGPoint(x: 10, y: 9), c: CGPoint(x: 6, y: 18)).fill(mk)
-                    Tri(a: CGPoint(x: 20, y: 9), b: CGPoint(x: 26, y: 11), c: CGPoint(x: 24, y: 18)).fill(mk)
-                    Ellipse().fill(mk).frame(width: 11, height: 8).position(x: 15, y: 21)
-                }
+                petKind.kittenFace(breed)
                 if !agent.mark.isEmpty {
                     Text(agent.mark).font(.system(size: 7, weight: .black, design: .rounded)).foregroundColor(.white)
                         .frame(width: 10, height: 10).background(Circle().fill(agent.color)).position(x: 15, y: 29)
