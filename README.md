@@ -38,7 +38,7 @@ That's the whole install. Buddy builds on your Mac in about a minute and starts 
 - **One simple to-do list.** Add due dates; Buddy sorts it. Hover any item for "not today".
 - **The people who matter.** Birthdays, a nudge to call your mum on Sundays, your kid's bedtime. Right-click Buddy → *Set up my profile…* and answer a few questions.
 
-The card opens on Personal in the evening and on Work during the day.
+The card always opens on Work; Personal is one click away.
 
 ## Three looks
 
@@ -50,6 +50,8 @@ Right-click Buddy → **Theme**.
 | <img src="docs/burrow.png" width="280"> | <img src="docs/glass.png" width="280"> | <img src="docs/ink.png" width="280"> |
 
 Pick your pet too: **cat**, **pug** or **bear** (`~/buddy/install.sh pug`), or `random` for a different one each day. Right-click → **Costume** → *Caped hero* puts any of them in a cape and mask: it glides instead of walking, does a hero landing when you merge, flies off when a PR breaks, and now and then grapples up to the top of your screen.
+
+**Festivals:** Buddy dresses up on its own from a week before Durga Puja and Diwali to three days after: a red-bordered Pujo drape with kash flowers (it plays the dhak when an agent finishes, does a dhunuchi dance when you merge), or a Diwali kurta and marigold garland (lights diyas, waves a phuljhari, carries a diya after dark). Pick a costume yourself, or *No costume, ever*, and it won't.
 
 ## Everyday use
 

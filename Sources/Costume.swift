@@ -4,13 +4,15 @@ import SwiftUI
 // MARK: costumes, drawn over whichever pet and coat you have. Right-click → Costume, or "costume" in buddy.json.
 // A costume brings a look, a way of walking, and its own moves (the hero cases in `Gesture`).
 
-/// nil = none. Read once; the right-click menu changes it through Model.setCostume.
+/// Your pick: nil = automatic (festival costumes on festival days), "off" = never. Read once; the right-click menu changes it.
 var costume: String? = {
     let c = UserDefaults.standard.string(forKey: "bit.costume") ?? config["costume"] as? String
     return c == "none" ? nil : c
 }()
-var hero: Bool { costume == "hero" }
-let costumes = [("none", "No costume"), ("hero", "Caped hero")]
+/// What the pet has on right now: your pick, or the festival's (Festive.swift).
+var wearing: String? { costume == "off" ? nil : costume ?? festival() }
+var hero: Bool { wearing == "hero" }
+let costumes = [("none", "Automatic (dresses up for festivals)"), ("hero", "Caped hero"), ("durga", "Pujo"), ("diwali", "Diwali"), ("off", "No costume, ever")]
 
 // The caped hero: a crimson cape with a gold edge, a black domino mask, a gold star. An original hero, not any studio's.
 let capeRed = hex(0xb3263b), capeGold = hex(0xe0b03a), maskInk = hex(0x16161c)
@@ -59,8 +61,8 @@ extension Cat {
     }
 }
 
-/// Where the hero's moves put the body, for a move that began `gt` seconds ago: (lift, squash, tilt).
-func heroMotion(_ g: Gesture, _ gt: Double) -> (y: CGFloat, squash: CGFloat, tilt: Double) {
+/// Where a costume's moves put the body, for a move that began `gt` seconds ago: (lift, squash, tilt).
+func costumeMotion(_ g: Gesture, _ gt: Double) -> (y: CGFloat, squash: CGFloat, tilt: Double) {
     switch g {
     case .heroLanding:   // leap up out of view, slam down, hold the crouch, stand
         if gt < 0.35 { return (-64 * sin(gt / 0.35 * .pi / 2), 1, -10) }
@@ -69,6 +71,12 @@ func heroMotion(_ g: Gesture, _ gt: Double) -> (y: CGFloat, squash: CGFloat, til
         return (0, 1, 0)
     case .flyOff, .grapple:   // flying: lean up into the climb
         return (-4, 1, -18)
+    case .dhunuchi:   // rear up, sway with the smoke, settle
+        if gt < 0.3 { return (0, 1, -10 * gt / 0.3) }
+        if gt < 2.6 { return (0, 1, -10 + sin((gt - 0.3) * 4) * 8) }
+        return (0, 1, -10 * max(0, 1 - (gt - 2.6) / 0.4))
+    case .quietDhak: return (0, 1, 5)   // ears down
+    case .anaar: return (0, 1, gt > 0.6 ? 4 : 0)
     default: return (0, 1, 0)
     }
 }

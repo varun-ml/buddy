@@ -49,6 +49,8 @@ Copy `Sources/PetBear.swift` (Siddharth's bear) to `PetYours.swift`: coats, tric
 
 Costumes are drawn over any pet (`Sources/Costume.swift`): the caped hero is the model. A costume adds its drawing, can change the walk, and brings its own moves (new `Gesture` cases). `./Buddy --costume hero --trick grapple` tries one live. Original characters only: no trademarked heroes.
 
+**Festival costumes** (`Sources/Festive.swift`) switch on by date: add next year's dates to `festivals` from a panjika. Celebrate the culture, never draw deities or rituals on the pet, and have someone who celebrates the festival check the lines.
+
 ### Also welcome
 
 - **A theme.** Each theme is one card view (`BurrowCard`, `GlassCard`, `InkCard`); the data they show is shaped once in `Theme.swift`.

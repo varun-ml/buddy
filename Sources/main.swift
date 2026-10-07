@@ -25,7 +25,10 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let sx = Session(id: "x", ts: 0)   // each session finds its agent by source; unknown agents look like Claude Code
     precondition(sx.agent.label == "Claude" && Session(id: "x", ts: 0, source: "codex-cli").agent.label == "Codex" && Session(id: "x", ts: 0, source: "cursor").agent.label == "Claude")
     precondition(Set(pets.map(\.name)).count == pets.count && pets.allSatisfy { !$0.coats.isEmpty && !$0.tricks.isEmpty })   // every pet: a unique name, coats, tricks
-    precondition(ease(0) == 0 && ease(1) == 1 && ease(2) == 1 && heroMotion(.heroLanding, 0.45).y < 0 && heroMotion(.heroLanding, 2) == (0, 1, 0))   // the hero lands back on the floor
+    precondition(ease(0) == 0 && ease(1) == 1 && ease(2) == 1 && costumeMotion(.heroLanding, 0.45).y < 0 && costumeMotion(.heroLanding, 2) == (0, 1, 0))   // the hero lands back on the floor
+    let fd = { (d: String) in festival(on: isoDay.date(from: d)!) }   // a week before the festival days to three days after
+    precondition(fd("2026-10-09") == nil && fd("2026-10-10") == "durga" && fd("2026-10-24") == "durga" && fd("2026-10-25") == nil)
+    precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-14") == "diwali" && fd("2026-11-15") == nil)
     let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
     q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
     q.showCard = false; q.sayNext(); precondition(q.bubble?.text == "selftest a")
@@ -38,6 +41,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
     // test: render the card in every theme and tab to PNGs, from a fixed made-up profile (never your real one), for before/after checks
     let dir = CommandLine.arguments[i + 1], now = Date().timeIntervalSince1970
+    costume = "off"   // the same pictures on any day, festival or not
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
     statsRepos = ["you/demo"]   // the card shows PR tiles only when repos are set; never your own settings
     let m = Model()
@@ -91,33 +95,29 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/pet-\(p).png"))
         }
     } }
-    MainActor.assumeIsolated {   // the caped hero on each pet: standing, gliding, landing crouch, flying
-        costume = "hero"
-        var rows: [[Model]] = []
-        for p in ["cat", "pug", "bear"] {
-            forcedPet = p
-            rows.append((0..<4).map { i in
+    // each costume on each pet: standing, walking, and its moves part-way through (seconds in)
+    frozenNow = Calendar.current.date(bySettingHour: 20, minute: 0, second: 0, of: Date())!   // evening, so Diwali carries its diya
+    let poses: [(String, [(Gesture, Double)?])] = [
+        ("hero", [nil, (.none, -1), (.heroLanding, 0.8), (.grapple, 2)]),
+        ("durga", [nil, (.none, -1), (.dhak, 0.5), (.dhunuchi, 1.2), (.quietDhak, 1)]),
+        ("diwali", [nil, (.diyas, 2), (.phuljhari, 0.7), (.anaar, 0.9), (.rangoli, 3), (.kandil, 1.5)]),
+    ]
+    MainActor.assumeIsolated {
+        for (c, ps) in poses { for p in ["cat", "pug", "bear"] {
+            costume = c; forcedPet = p
+            let models: [Model] = ps.map { pose in
                 let pm = Model(); pm.breedIndex = 0; pm.sessions = [Session(id: "w", state: "working", ts: now)]
-                if i == 1 { pm.walking = true }
-                if i == 2 { pm.gesture = .heroLanding; pm.gestureAt = Date().addingTimeInterval(-0.8) }
-                if i == 3 { pm.gesture = .grapple; pm.gestureAt = Date().addingTimeInterval(-2) }
+                if let (g, t) = pose { if t < 0 { pm.walking = true } else { pm.gesture = g; pm.gestureAt = frozenNow!.addingTimeInterval(-t) } }
                 return pm
-            })
-        }
-        var imgs: [NSImage] = []
-        for (r, p) in ["cat", "pug", "bear"].enumerated() {
-            forcedPet = p
-            let row = HStack(spacing: 6) { ForEach(rows[r].indices, id: \.self) { i in Cat(m: rows[r][i]).frame(width: 96, height: 84) } }
-                .padding(8).background(Color.white).environment(\.colorScheme, .light)
-            let rr = ImageRenderer(content: row); rr.scale = 2
-            if let img = rr.nsImage { imgs.append(img) }
-        }
-        for (r, img) in imgs.enumerated() {
-            if let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
-                try? png.write(to: URL(fileURLWithPath: "\(dir)/hero-\(["cat", "pug", "bear"][r]).png"))
             }
-        }
-        costume = nil; forcedPet = nil
+            let row = HStack(spacing: 6) { ForEach(models.indices, id: \.self) { i in Cat(m: models[i]).frame(width: 96, height: 84) } }
+                .padding(8).background(Color.white).environment(\.colorScheme, .light)
+            let r = ImageRenderer(content: row); r.scale = 2
+            if let img = r.nsImage, let t = img.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) {
+                try? png.write(to: URL(fileURLWithPath: "\(dir)/costume-\(c)-\(p).png"))
+            }
+        } }
+        costume = "off"; forcedPet = nil; frozenNow = nil
     }
     print("snapshots in \(dir)"); exit(0)
 }
