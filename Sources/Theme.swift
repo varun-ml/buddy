@@ -40,7 +40,6 @@ struct Pot: Identifiable {
     var age: String { ago(Date().timeIntervalSince1970 - (done ? s.ts : s.turnStart ?? s.ts)) }
 }
 extension Session {
-    var isCodex: Bool { (source ?? "").hasPrefix("codex") }
     var quietFor: String { ago(Date().timeIntervalSince1970 - ts) }
 }
 extension Model {

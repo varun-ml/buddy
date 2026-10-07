@@ -60,7 +60,7 @@ struct LitterView: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
             ForEach(Array(m.waiting.enumerated()), id: \.element.id) { i, s in
-                Kitten(breed: breeds[(i + 2) % breeds.count], asleep: Date().timeIntervalSince1970 - s.ts > 600, codex: s.isCodex)
+                Kitten(breed: breeds[(i + 2) % breeds.count], asleep: Date().timeIntervalSince1970 - s.ts > 600, agent: s.agent)
                     .help("\(s.repo ?? "A session") is waiting for your OK · \(ago(Date().timeIntervalSince1970 - s.ts))\n\(s.activity ?? "")\nclick to go to Claude")
                     .onTapGesture { activate(s) }
             }
@@ -73,7 +73,7 @@ struct LitterView: View {
 struct Kitten: View {
     var breed: Breed
     var asleep: Bool
-    var codex = false
+    var agent = agents.last!
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 10)) { t in
             let s = t.date.timeIntervalSinceReferenceDate
@@ -92,9 +92,9 @@ struct Kitten: View {
                     Tri(a: CGPoint(x: 20, y: 9), b: CGPoint(x: 26, y: 11), c: CGPoint(x: 24, y: 18)).fill(mk)
                     Ellipse().fill(mk).frame(width: 11, height: 8).position(x: 15, y: 21)
                 }
-                if codex {
-                    Text("◆").font(.system(size: 7, weight: .black, design: .rounded)).foregroundColor(.white)
-                        .frame(width: 10, height: 10).background(Circle().fill(Color(red: 0.06, green: 0.64, blue: 0.5))).position(x: 15, y: 29)
+                if !agent.mark.isEmpty {
+                    Text(agent.mark).font(.system(size: 7, weight: .black, design: .rounded)).foregroundColor(.white)
+                        .frame(width: 10, height: 10).background(Circle().fill(agent.color)).position(x: 15, y: 29)
                 }
                 if asleep {
                     HStack(spacing: 5) { Capsule().frame(width: 4, height: 1.2); Capsule().frame(width: 4, height: 1.2) }

@@ -333,9 +333,8 @@ struct BurrowCard: View {
         }
     }
     func potIcon(_ x: Session) -> some View {
-        let codex = x.isCodex
-        return RoundedRectangle(cornerRadius: 11).fill(codex ? codexColor : bClay).frame(width: 30, height: 30)
-            .overlay(Text(codex ? "Cx" : "Cl").font(.system(size: 11, weight: .heavy, design: .rounded)).foregroundColor(.white))
+        RoundedRectangle(cornerRadius: 11).fill(x.agent.color).frame(width: 30, height: 30)
+            .overlay(Text(x.agent.badge).font(.system(size: 11, weight: .heavy, design: .rounded)).foregroundColor(.white))
     }
     func tile(_ big: String, _ label: String, _ em: String?, hot: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -487,7 +486,7 @@ struct BurrowWorkScene: View {
                         c.fill(Path(roundedRect: CGRect(x: 96, y: 112, width: 200, height: 6), cornerRadius: 3), with: .color(hex(0x6b4a36)))
                         for (i, s) in pots.enumerated() {
                             let x = pots.count == 1 ? 196 : 130 + CGFloat(i) * (132 / CGFloat(max(pots.count - 1, 1)))
-                            let col = s.isCodex ? codexColor : bClay
+                            let col = s.agent.color
                             var g = c; g.translateBy(x: x, y: 104)
                             for (dx, delay) in [(-4.0, Double(i) * 0.6), (5.0, Double(i) * 0.6 + 1.1)] {
                                 let ph = ((t + delay).truncatingRemainder(dividingBy: 2.4)) / 2.4

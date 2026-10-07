@@ -282,9 +282,8 @@ struct GlassCard: View {
         }
     }
     func appIcon(_ x: Session) -> some View {
-        let codex = x.isCodex
-        return RoundedRectangle(cornerRadius: 8).fill(LinearGradient(colors: codex ? [hex(0x1fc79c), hex(0x0e8f6f)] : [hex(0xe8906f), hex(0xc9643f)], startPoint: .topLeading, endPoint: .bottomTrailing))
-            .frame(width: 28, height: 28).overlay(Text(codex ? ">_" : "✳").font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.white))
+        RoundedRectangle(cornerRadius: 8).fill(LinearGradient(colors: x.agent.gradient, startPoint: .topLeading, endPoint: .bottomTrailing))
+            .frame(width: 28, height: 28).overlay(Text(x.agent.glyph).font(.system(size: 12, weight: .bold, design: .monospaced)).foregroundColor(.white))
     }
     func num(_ big: String, _ label: String, _ em: String?, hot: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 2) {

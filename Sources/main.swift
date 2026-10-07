@@ -22,6 +22,8 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let old = try! JSONDecoder().decode(Life.self, from: #"{"me":"x","people":[{"name":"A","relation":"child"}],"horizons":{"today":{"text":"t","set":"2026-10-06"}}}"#.data(using: .utf8)!)
     precondition(old.people.count == 1 && old.liked.isEmpty && old.horizons?.today?.k == 0)
     precondition(hm(400 * 60) == "6h40" && hm(35 * 60) == "35m" && hm(60 * 60) == "1h00")
+    let sx = Session(id: "x", ts: 0)   // each session finds its agent by source; unknown agents look like Claude Code
+    precondition(sx.agent.label == "Claude" && Session(id: "x", ts: 0, source: "codex-cli").agent.label == "Codex" && Session(id: "x", ts: 0, source: "cursor").agent.label == "Claude")
     let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
     q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
     q.showCard = false; q.sayNext(); precondition(q.bubble?.text == "selftest a")

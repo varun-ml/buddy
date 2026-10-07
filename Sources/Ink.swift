@@ -187,7 +187,7 @@ struct InkCard: View {
                 }.buttonStyle(.plain)
             }
             ForEach(shown, ) { p in
-                let codex = p.s.isCodex, c = codex ? codexColor : claudeColor
+                let c = p.s.agent.color
                 Button { activate(p.s) } label: {
                     HStack(spacing: 10) {
                         if p.done { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundColor(kGreen).frame(width: 14, height: 14) }
@@ -198,7 +198,7 @@ struct InkCard: View {
                         Text(p.s.repo ?? "?").font(.system(size: 13, weight: .medium)).lineLimit(1).layoutPriority(1)
                         Text(p.line).font(.system(size: 11.5, design: .monospaced)).foregroundColor(kDim).lineLimit(1)
                         Spacer(minLength: 4)
-                        Text(codex ? "Codex" : "Claude").font(.system(size: 10.5, weight: .medium)).foregroundColor(c).fixedSize().padding(.horizontal, 6).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 4).fill(c.opacity(0.12)))
+                        Text(p.s.agent.label).font(.system(size: 10.5, weight: .medium)).foregroundColor(c).fixedSize().padding(.horizontal, 6).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 4).fill(c.opacity(0.12)))
                         Text(p.done ? "done" : p.age).font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(p.done ? kGreen : kSub).fixedSize()
                     }.frame(height: 34).padding(.horizontal, 6).contentShape(Rectangle())
                 }.buttonStyle(.plain).padding(.horizontal, -6)

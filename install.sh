@@ -8,41 +8,8 @@ LABEL=com.buddy-pet.buddy
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 OLD_PLISTS=("$HOME"/Library/LaunchAgents/com.claude-mods.buddy.plist "$HOME"/Library/LaunchAgents/com.*.bit.plist)   # earlier names
 
-# Add or remove Buddy's hook (beat.py) in Claude Code's and Codex's settings. Other hooks are left alone.
-hooks() {   # $1 = add | remove
-  python3 - "$1" "$DIR/beat.py" <<'EOF'
-import json, os, shutil, sys
-mode, beat = sys.argv[1], sys.argv[2]
-def edit(path, events):
-    d = {}
-    if os.path.exists(path):
-        try:
-            d = json.load(open(path))
-        except ValueError as e:
-            print(f'skipped {path}: it is not valid JSON ({e}). Fix it and run this again.')
-            return
-        if not os.path.exists(path + '.bak-buddy'):   # keep the original from before Buddy, not a copy of a copy
-            shutil.copy(path, path + '.bak-buddy')
-    elif mode == 'remove':
-        return
-    hooks = d.setdefault('hooks', {})
-    for ev in events:
-        groups = hooks.setdefault(ev, [])
-        for g in groups:   # drop any copy of beat.py (any path)
-            g['hooks'] = [h for h in g.get('hooks', []) if not h.get('command', '').endswith('beat.py')]
-        groups[:] = [g for g in groups if g['hooks']]
-        if mode == 'add':
-            groups.append({'hooks': [{'type': 'command', 'command': f'python3 {beat}', 'timeout': 5}]})
-        if not groups:
-            del hooks[ev]
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    json.dump(d, open(path, 'w'), indent=2)
-    print(('hooks added: ' if mode == 'add' else 'hooks removed: ') + path)
-edit(os.path.expanduser('~/.claude/settings.json'), ['UserPromptSubmit', 'PreToolUse', 'Notification', 'Stop', 'SessionEnd'])
-if os.path.isdir(os.path.expanduser('~/.codex')):
-    edit(os.path.expanduser('~/.codex/hooks.json'), ['UserPromptSubmit', 'PreToolUse', 'PermissionRequest', 'PostToolUse', 'Stop', 'SessionEnd'])
-EOF
-}
+# Add or remove Buddy's hook (beat.py) in each agent's settings. Other hooks are left alone.
+hooks() { python3 "$DIR/beat.py" --hooks "$1"; }   # $1 = add | remove; each agent's settings file is listed in beat.py
 
 stop_old() {
   for p in "$PLIST" "${OLD_PLISTS[@]}"; do

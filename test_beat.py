@@ -51,4 +51,17 @@ assert session('codex-x2') is None and session('codex-x3') is None
 # Buddy's own Claude call (gift ideas)
 hook(session_id='b1', hook_event_name='UserPromptSubmit', cwd=os.path.expanduser('~/.config/buddy'), prompt='ideas')
 assert session('b1') is None
+
+# install.sh: add twice, then remove; other hooks are left alone
+H = os.path.join(T, 'home'); os.makedirs(os.path.join(H, '.claude')); os.makedirs(os.path.join(H, '.codex'))
+mine = {'hooks': {'Stop': [{'hooks': [{'type': 'command', 'command': 'say done'}]}]}}
+json.dump(mine, open(os.path.join(H, '.claude', 'settings.json'), 'w'))
+def install(mode):
+    subprocess.run(['python3', os.path.join(HERE, 'beat.py'), '--hooks', mode], env={**os.environ, 'HOME': H}, check=True, capture_output=True)
+    return [json.load(open(os.path.join(H, f))) for f in ('.claude/settings.json', '.codex/hooks.json')]
+def beats(d): return sum(h['command'].endswith('beat.py') for gs in d.get('hooks', {}).values() for g in gs for h in g['hooks'])
+install('add'); claude, codex = install('add')
+assert beats(claude) == 5 and beats(codex) == 6, (beats(claude), beats(codex))
+claude, codex = install('remove')
+assert claude == mine and beats(codex) == 0, claude
 print('hook test ok')

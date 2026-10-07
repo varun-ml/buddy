@@ -16,7 +16,7 @@ struct Session: Codable, Identifiable, Equatable {
     var prompt: String?
     var ts: Double
     var turnStart: Double?
-    var source: String? = nil   // nil = Claude Code, "codex-desktop" (ChatGPT app) or "codex-cli"
+    var source: String? = nil   // which agent (see Agents.swift): nil = Claude Code, "codex-desktop" (ChatGPT app) or "codex-cli"
     var tty: String? = nil        // the terminal tab it runs in
     var termApp: String? = nil    // Terminal, iTerm2, Ghostty, Cursor… ("claude"/"ChatGPT" = the desktop apps)
     var herdrPane: String? = nil  // set when it runs inside a herdr pane
@@ -226,15 +226,8 @@ func ago(_ seconds: Double) -> String {
 /// Bring forward whichever app the session lives in.
 func activate(_ s: Session) {
     if let pane = s.herdrPane { focusHerdr(pane); return }
-    if let app = s.termApp, !["claude", "Claude", "ChatGPT", "Codex"].contains(app) { focusTerminal(app, tty: s.tty); return }
-    switch s.source {
-    case "codex-desktop" where !s.id.hasPrefix("codex-"): NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/Applications/ChatGPT.app"), configuration: .init())
-    case "codex-cli": NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"), configuration: .init())
-    case "codex-desktop" where s.id.hasPrefix("codex-"):
-        NSWorkspace.shared.open(URL(string: "codex://threads/" + s.id.dropFirst(6))!)
-    default:
-        if let u = ccdLink(s.id) { NSWorkspace.shared.open(u) } else { activateClaude() }
-    }
+    if let app = s.termApp, !agents.contains(where: { $0.apps.contains(app) }) { focusTerminal(app, tty: s.tty); return }
+    s.agent.open(s)
 }
 
 /// Bring a terminal tab forward by its tty. Terminal and iTerm2 can pick the exact tab; other apps just come to the front.
