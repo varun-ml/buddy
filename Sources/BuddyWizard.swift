@@ -50,10 +50,11 @@ extension Cat {
         let mouth = darkSkin ? hex(0xf2b8a2) : hex(0x6b3420)
         let waving = (p.g == .capeSwirl || p.g == .stretch) && p.gt < 1.3
         let fly: CGFloat = p.g == .flyOff ? 1 : 0
-        let sway = CGFloat(p.step) * 2.5 + (fly > 0 ? CGFloat(sin(p.s * 16)) * 1.5 : 0)
+        let sway = CGFloat(p.step) * 5 + (fly > 0 ? CGFloat(sin(p.s * 16)) * 1.5 : 0)   // the hem swings with each step
+        let walkBob = -CGFloat(abs(p.step)) * 2.2   // up on each step, so the walk reads at pet size
         let bob = CGFloat(sin(p.s * 2.4)) * 0.6
         let wave = waving ? sin(p.gt / 1.3 * .pi) : 0   // staff raised forward, waggled twice
-        let staffTilt = waving ? wave * (20 + 10 * sin(p.gt / 1.3 * 4 * .pi)) : fly > 0 ? 30 : p.asleep ? -6 : 0
+        let staffTilt = waving ? wave * (20 + 10 * sin(p.gt / 1.3 * 4 * .pi)) : fly > 0 ? 30 : p.asleep ? -6 : p.step * 9   // plants the staff in time
         // teleport: shrink away into a puff of smoke, then pop back
         let poof = p.g == .spin ? (p.gt < 0.35 ? 1 - p.gt / 0.35 : p.gt < 0.75 ? 0 : min(1, (p.gt - 0.75) / 0.3)) : 1
         let smoke = p.g == .spin && p.gt > 0.15 && p.gt < 1.1 ? sin((p.gt - 0.15) / 0.95 * .pi) : 0
@@ -67,8 +68,9 @@ extension Cat {
                 // feet peeking out under the hem
                 if fly == 0 && !cloud {
                     ForEach([0, 1], id: \.self) { i in
-                        Capsule().fill(b.dark).frame(width: 7, height: 4)
-                            .position(x: (i == 0 ? 46 : 55) + CGFloat(p.step) * (i == 0 ? 2.5 : -2.5), y: 67)
+                        let fwd = CGFloat(p.step) * (i == 0 ? 1 : -1)   // boots step out from under the hem, one lifting
+                        Capsule().fill(b.dark).frame(width: 8, height: 4.5)
+                            .position(x: (i == 0 ? 45 : 56) + fwd * 6, y: 69 - max(0, fwd) * 2.5)
                     }
                 }
                 // robe: shoulders to a wide hem that sways as it glides; streams back when flying
@@ -141,6 +143,7 @@ extension Cat {
             }
             .scaleEffect(poof, anchor: UnitPoint(x: 52 / 84, y: 0.6))
             .opacity(poof)
+            .offset(y: walkBob)
             // speed streaks while zipping off
             if fly > 0 {
                 ForEach(0..<3, id: \.self) { i in
