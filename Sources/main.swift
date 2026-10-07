@@ -42,7 +42,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
     // test: render the card in every theme and tab to PNGs, from a fixed made-up profile (never your real one), for before/after checks
     let dir = CommandLine.arguments[i + 1], now = Date().timeIntervalSince1970
-    costume = "off"   // the same pictures on any day, festival or not
+    costume = "off"; forcedPet = "cat"   // the same pictures on any day and any Mac, whatever costume or buddy you picked
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
     statsRepos = ["you/demo"]   // the card shows PR tiles only when repos are set; never your own settings
     let m = Model()
