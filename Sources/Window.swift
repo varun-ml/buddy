@@ -177,6 +177,7 @@ struct PetView: View {
                             Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
                         }
                     }
+                    Button("🎲 Shuffle buddy") { m.shuffle() }
                     Menu("Buddy") {
                         ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
                             Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }

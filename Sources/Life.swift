@@ -268,6 +268,14 @@ extension Model {
         if petKind.biped, let g = petKind.onMerge { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { self.doGesture(g) } }   // an entrance
     }
 
+    /// A different buddy in a random coat, from the shuffle pool.
+    func shuffle() {
+        let now = pet
+        setPet((shufflePool.filter { $0 != now }.randomElement()) ?? now)
+        breedIndex = Int.random(in: 0..<breeds.count)
+        UserDefaults.standard.set(breedIndex, forKey: "bit.breed")
+    }
+
     func setCostume(_ name: String) {
         UserDefaults.standard.set(name, forKey: "bit.costume")
         costume = name == "none" ? nil : name

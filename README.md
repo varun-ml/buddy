@@ -51,7 +51,7 @@ Right-click Buddy → **Theme**.
 
 ## Pick your buddy
 
-Right-click Buddy → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day.
+Right-click Buddy → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day, or right-click → **🎲 Shuffle buddy** for a new one right now. Don't like one? Leave it out of both with `"skipBuddies": ["robot"]` in `~/.config/buddy.json`.
 
 <p align="center"><img src="docs/buddies.png" width="660" alt="The eight buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut and robot"></p>
 
@@ -130,6 +130,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | Setting | What it does |
 |---|---|
 | `pet` | `cat`, `pug`, `bear`, `hero`, `ninja`, `wizard`, `astronaut`, `robot`, `stitch`, or `random` (a different one each day). The right-click menu overrides it. |
+| `skipBuddies` | Buddies that `random` and Shuffle never pick, e.g. `["robot"]` |
 | `costume` | `hero`, `durga`, `diwali`, `off` (never), or leave it out to dress up for festivals on its own. Cat, pug and bear only. |
 | `outfit` | `none` takes off the pug's tracksuit and shades |
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
