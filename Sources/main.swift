@@ -119,8 +119,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             }
         } }
         // every avatar: standing, walking, hero landing, flying, cape swirl, asleep
-        let moves: [(Gesture, Double)?] = [nil, (.none, -1), (.heroLanding, 0.8), (.grapple, 2), (.capeSwirl, 0.6), (.none, -2)]
-        for p in pets.filter(\.biped).map(\.name) {
+        for kind in pets.filter(\.biped) {
+            let p = kind.name
+            let own = [kind.onMerge, kind.onRed].compactMap { $0 }.filter { ![.heroLanding, .grapple, .capeSwirl].contains($0) }.map { ($0, 1.0) }   // its own big moves too
+            let moves: [(Gesture, Double)?] = [nil, (.none, -1), (.heroLanding, 0.8), (.grapple, 2), (.capeSwirl, 0.6)] + own + [(.none, -2)]
             costume = "off"; forcedPet = p
             let models: [Model] = moves.map { pose in
                 let pm = Model(); pm.breedIndex = 0

@@ -51,11 +51,11 @@ Right-click Buddy → **Theme**.
 
 ## Pick your buddy
 
-Right-click Buddy → **Buddy**. Three animals, five that aren't, each with five looks. Or `random` for a different one every day.
+Right-click Buddy → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day.
 
 <p align="center"><img src="docs/buddies.png" width="660" alt="The eight buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut and robot"></p>
 
-Each has its own way of reacting: the hero flies off when a PR breaks, the ninja climbs a rope and throws a toy star, the wizard teleports and floats on a cloud, the astronaut plants a flag when you merge, the robot dances.
+Each has its own way of reacting: the hero flies off when a PR breaks, the ninja climbs a rope and throws a toy star, the wizard teleports and floats on a cloud, the astronaut plants a flag when you merge, the robot dances, and Stitch plays the ukulele, surfs, and goes full alien (extra arms, antennae, spines) when a PR breaks.
 
 <p align="center"><img src="docs/tricks.png" width="900" alt="Tricks: the hero flying, the ninja climbing, the wizard on a cloud, the astronaut's flag, the wizard's staff sparkling, the robot walking"></p>
 
@@ -129,7 +129,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 
 | Setting | What it does |
 |---|---|
-| `pet` | `cat`, `pug`, `bear`, `hero`, `ninja`, `wizard`, `astronaut`, `robot`, or `random` (a different one each day). The right-click menu overrides it. |
+| `pet` | `cat`, `pug`, `bear`, `hero`, `ninja`, `wizard`, `astronaut`, `robot`, `stitch`, or `random` (a different one each day). The right-click menu overrides it. |
 | `costume` | `hero`, `durga`, `diwali`, `off` (never), or leave it out to dress up for festivals on its own. Cat, pug and bear only. |
 | `outfit` | `none` takes off the pug's tracksuit and shades |
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
