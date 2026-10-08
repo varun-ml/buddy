@@ -80,6 +80,15 @@ struct ThemeSurface: View {
     }
 }
 
+/// The ✕ on an alert row (waiting or stuck): ignores that session.
+struct ClearX: View {
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) { Text("✕").font(.system(size: 11, weight: .bold)).foregroundColor(.secondary).padding(.horizontal, 8).frame(maxHeight: .infinity) }
+            .buttonStyle(.plain).help("Ignore this session")
+    }
+}
+
 struct Chip: View {
     var label: String
     var primary = false
