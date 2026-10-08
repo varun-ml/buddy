@@ -352,8 +352,7 @@ final class Model: ObservableObject {
             let z = DateFormatter(); z.dateFormat = "xxx"; let tz = z.string(from: Date())   // "+05:30"
             let from = "\(today)T00:00:00\(tz)", yFrom = "\(yest)T00:00:00\(tz)"
             // one set of repos for your tiles and the leaderboard, so the two always agree
-            // which repos count: ~/.config/buddy.json "statsRepos": ["owner/repo", ...]; none set → no PR tiles or leaderboard
-            guard !statsRepos.isEmpty else { DispatchQueue.main.async { self.applyStats(Stats()) }; return }
+            // which repos count: ~/.config/buddy.json "statsRepos": ["owner/repo", ...]; none set → every repo, and no tiles or leaderboard
             let repos = statsRepos.map { "repo:\($0)" }.joined(separator: " ")
             let q = """
             query{ viewer{login}
@@ -372,7 +371,7 @@ final class Model: ObservableObject {
             }
             // the team: every merged PR today, 100 per page (a busy day is 150+; one page dropped the rest)
             var by: [String: Int] = [:], after = "", total = 0
-            for _ in 0..<10 {
+            for _ in 0..<(statsRepos.isEmpty ? 0 : 10) {
                 let tq = "query{ search(query:\"is:pr is:merged merged:>=\(from) \(repos)\",type:ISSUE,first:100\(after)){issueCount pageInfo{hasNextPage endCursor} nodes{... on PullRequest{author{login}}}} }"
                 guard let d = gh(["api", "graphql", "-f", "query=\(tq)"]),
                       let r = ((try? JSONSerialization.jsonObject(with: d) as? [String: Any])?["data"] as? [String: Any])?["search"] as? [String: Any] else { break }
@@ -405,6 +404,9 @@ final class Model: ObservableObject {
         let prevMerged = stats.merged
         stats = s
         statsLoaded = true
+        // the one place the merge count changes, so the bubble always says what the card shows
+        if !first, s.merged > prevMerged { say(line("merged", "Merged! That's \(s.merged) today 🏆", ["n": "\(s.merged)"]), .happy, seconds: 8) }
+        mergedToday = s.merged
         if first && Calendar.current.component(.hour, from: Date()) >= 6 && Day.once("greeted") {
             let y = s.yesterdayMerged.map { "Yesterday you merged \($0)." } ?? ""
             say("Morning! \(y)\n\(todayQuote[0])", .happy, seconds: 12, kind: .quote, byline: "— \(todayQuote[1])", pose: .glasses)
@@ -617,17 +619,16 @@ final class Model: ObservableObject {
                           failing: failing, isDraft: n["isDraft"] as? Bool ?? false,
                           updated: iso.date(from: n["updatedAt"] as? String ?? "") ?? .distantPast)
             }
-            let fmt = DateFormatter(); fmt.dateFormat = "yyyy-MM-dd"
-            let mq = "query{search(query:\"is:pr author:@me is:merged merged:>=\(fmt.string(from: Date()))\",type:ISSUE){issueCount}}"
-            let merged = gh(["api", "graphql", "-f", "query=\(mq)"])
-                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
-                .flatMap { (($0["data"] as? [String: Any])?["search"] as? [String: Any])?["issueCount"] as? Int }
-            DispatchQueue.main.async { self.apply(prs, merged: merged) }
+            DispatchQueue.main.async { self.apply(prs) }
         }
     }
 
-    private func apply(_ new: [PR], merged: Int?) {
+    private func apply(_ new: [PR]) {
         let first = prsCheckedAt == nil
+        // one of your PRs left the open list: count again in a minute (GitHub's search lags), not at the next 10-minute tick
+        if !first, !Set(prs.map(\.id)).subtracting(new.map(\.id)).isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 60) { self.loadStats() }
+        }
         for pr in new where pr.recent {
             let prev = lastCI[pr.id]
             if !first, prev != pr.ci {
@@ -638,10 +639,6 @@ final class Model: ObservableObject {
                 }
             }
             lastCI[pr.id] = pr.ci
-        }
-        if let merged = merged {
-            if !first, merged > mergedToday { say(line("merged", "Merged! That's \(merged) today 🏆", ["n": "\(merged)"]), .happy, seconds: 8) }
-            mergedToday = merged
         }
         prs = new
         prsCheckedAt = Date()
