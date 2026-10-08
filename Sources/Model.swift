@@ -247,11 +247,14 @@ final class Model: ObservableObject {
     var expanded: Bool { bubble != nil || showCard }
     var snoozed: Bool { (snoozedUntil ?? .distantPast) > Date() }
 
-    /// Clear a session by hand (the ✕ on a stuck row): for a session that ended without telling Buddy.
-    func forget(_ s: Session) {
-        try? FileManager.default.removeItem(atPath: (sessionsDir as NSString).appendingPathComponent("\(s.id).json"))
+    /// Ignore a session (✕ on an alert row, or right-click any row): hidden until it's forgotten (12 h quiet), even if it keeps posting.
+    func ignore(_ s: Session) {
+        var ig = ignored.filter { Date().timeIntervalSince1970 - $0.value < forgetAfter }
+        ig[s.id] = Date().timeIntervalSince1970
+        UserDefaults.standard.set(ig, forKey: "bit.ignored")
         loadSessions()
     }
+    var ignored: [String: Double] { UserDefaults.standard.dictionary(forKey: "bit.ignored") as? [String: Double] ?? [:] }
     func isStuck(_ s: Session) -> Bool { s.state == "working" && Date().timeIntervalSince1970 - s.ts > staleAfter }
 
     var waiting: [Session] { sessions.filter { $0.state == "waiting" } }
@@ -565,11 +568,13 @@ final class Model: ObservableObject {
         let fm = FileManager.default
         let now = Date().timeIntervalSince1970
         var out: [Session] = []
+        let ig = ignored
         for f in (try? fm.contentsOfDirectory(atPath: sessionsDir)) ?? [] where f.hasSuffix(".json") {
             let p = (sessionsDir as NSString).appendingPathComponent(f)
             guard let data = fm.contents(atPath: p), let s = try? JSONDecoder().decode(Session.self, from: data) else { continue }
             if now - s.ts > forgetAfter { try? fm.removeItem(atPath: p); continue }
             if let c = s.cwd, !c.isEmpty, !fm.fileExists(atPath: c) { try? fm.removeItem(atPath: p); continue }   // its folder is gone (a deleted worktree): it can never finish
+            if ig[s.id] != nil { continue }
             if isStuck(s), s.id.hasPrefix("codex-"), codexArchived(String(s.id.dropFirst(6))) { try? fm.removeItem(atPath: p); continue }   // archived mid-turn: no Stop ever comes
             out.append(s)
         }

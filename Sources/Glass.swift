@@ -170,7 +170,7 @@ struct GlassCard: View {
         let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 10) {
             ForEach(m.waiting) { w in
-                Button { activate(w) } label: {
+                HStack(spacing: 0) { Button { activate(w) } label: {
                     HStack(spacing: 10) {
                         appIcon(w)
                         VStack(alignment: .leading, spacing: 1) {
@@ -180,7 +180,7 @@ struct GlassCard: View {
                         Spacer(minLength: 4)
                         Text("Go ›").font(.system(size: 12, weight: .semibold)).foregroundColor(hex(0xe8590c))
                     }.padding(10).background(RoundedRectangle(cornerRadius: 14).fill(hex(0xff9500).opacity(0.16)))
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(w) } }.contextMenu { Button("Ignore this session") { m.ignore(w) } }
             }
             ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.55))) }
             HStack(spacing: 8) {
@@ -194,10 +194,10 @@ struct GlassCard: View {
             if !pots.isEmpty || !m.stuck.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(m.stuck) { st in
-                        Button { activate(st) } label: {
+                        HStack(spacing: 0) { Button { activate(st) } label: {
                             Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12, weight: .medium)).foregroundColor(hex(0xe8590c)).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6).padding(.vertical, 7)
-                        }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
+                        }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(st) } }.contextMenu { Button("Ignore this session") { m.ignore(st) } }
                     }
                     ForEach(shown, ) { p in
                         Button { activate(p.s) } label: {
@@ -214,7 +214,7 @@ struct GlassCard: View {
                                 Text(p.done ? "done \(p.age)" : p.age)
                                     .font(.system(size: 12, weight: .medium)).monospacedDigit().foregroundColor(p.done ? hex(0x248a3d) : gSub)
                             }.padding(.horizontal, 6).padding(.vertical, 7).contentShape(Rectangle())
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
                     }
                     if pots.count > listCap { Button(ui.allPots ? "Show less" : "Show \(pots.count - listCap) more") { withAnimation { ui.allPots.toggle() } }.buttonStyle(.plain).font(.system(size: 12, weight: .semibold)).foregroundColor(gBlue).frame(maxWidth: .infinity, alignment: .leading).padding(6) }
                 }.padding(.vertical, 6).padding(.horizontal, 8).background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55)))

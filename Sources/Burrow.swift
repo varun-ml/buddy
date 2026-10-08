@@ -209,7 +209,7 @@ struct BurrowCard: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 6) {
                 ForEach(m.waiting) { w in
-                    Button { activate(w) } label: {
+                    HStack(spacing: 0) { Button { activate(w) } label: {
                         HStack(spacing: 10) {
                             potIcon(w)
                             VStack(alignment: .leading, spacing: 1) {
@@ -219,16 +219,16 @@ struct BurrowCard: View {
                             Spacer(minLength: 4)
                             Text("Go →").font(.system(size: 11.5, weight: .heavy, design: .rounded)).foregroundColor(hex(0xc4542b))
                         }.padding(.horizontal, 12).padding(.vertical, 9).background(RoundedRectangle(cornerRadius: 16).fill(hex(0xffe2cf)))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(w) } }.contextMenu { Button("Ignore this session") { m.ignore(w) } }
                 }
                 ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 16).fill(Color.white)) }
                 ForEach(m.stuck) { st in
-                    Button { activate(st) } label: {
+                    HStack(spacing: 0) { Button { activate(st) } label: {
                         Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · last: \(st.activity ?? "")")
                             .font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundColor(hex(0xc4542b)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 14).fill(hex(0xfdebd9)))
-                    }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
+                    }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(st) } }.contextMenu { Button("Ignore this session") { m.ignore(st) } }
                 }
                 ForEach(shownPots, ) { p in
                     Button { activate(p.s) } label: {
@@ -242,7 +242,7 @@ struct BurrowCard: View {
                             Text(p.done ? "done \(p.age)" : p.age)
                                 .font(.system(size: 11.5, weight: .bold, design: .rounded)).foregroundColor(p.done ? bSageInk : bSub)
                         }.padding(.horizontal, 12).padding(.vertical, 7).background(RoundedRectangle(cornerRadius: 16).fill(Color.white))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
                 }
                 if pots.isEmpty && m.waiting.isEmpty {
                     Text("Nothing on the stove. Buddy's napping.").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(bSub)

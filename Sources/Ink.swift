@@ -169,7 +169,7 @@ struct InkCard: View {
         let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 0) {
             ForEach(m.waiting) { w in
-                Button { activate(w) } label: {
+                HStack(spacing: 0) { Button { activate(w) } label: {
                     HStack(spacing: 10) {
                         Circle().fill(hex(0xf2994a)).frame(width: 8, height: 8)
                         Text("\(w.repo ?? "?") wants your OK").font(.system(size: 13, weight: .medium)).lineLimit(1)
@@ -177,14 +177,14 @@ struct InkCard: View {
                         Spacer(minLength: 4)
                         Text("go →").font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(hex(0xf2994a))
                     }.padding(.horizontal, 10).padding(.vertical, 8).background(RoundedRectangle(cornerRadius: 6).fill(hex(0xf2994a).opacity(0.12))).padding(.bottom, 8)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(w) } }.contextMenu { Button("Ignore this session") { m.ignore(w) } }
             }
             ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).padding(.bottom, 8) }
             lb("Running", "\(m.working.count)")
             ForEach(m.stuck) { st in
-                Button { activate(st) } label: {
+                HStack(spacing: 0) { Button { activate(st) } label: {
                     Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12)).foregroundColor(hex(0xf2994a)).lineLimit(1).frame(height: 30, alignment: .leading)
-                }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
+                }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(st) } }.contextMenu { Button("Ignore this session") { m.ignore(st) } }
             }
             ForEach(shown, ) { p in
                 let c = p.s.agent.color
@@ -201,7 +201,7 @@ struct InkCard: View {
                         Text(p.s.agent.label).font(.system(size: 10.5, weight: .medium)).foregroundColor(c).fixedSize().padding(.horizontal, 6).padding(.vertical, 1).background(RoundedRectangle(cornerRadius: 4).fill(c.opacity(0.12)))
                         Text(p.done ? "done" : p.age).font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundColor(p.done ? kGreen : kSub).fixedSize()
                     }.frame(height: 34).padding(.horizontal, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain).padding(.horizontal, -6)
+                }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }.padding(.horizontal, -6)
             }
             if pots.isEmpty && m.waiting.isEmpty { Text("Nothing running.").font(.system(size: 13)).foregroundColor(kSub).padding(.vertical, 4) }
             if pots.count > listCap { Button(ui.allPots ? "show less" : "+ \(pots.count - listCap) more") { withAnimation { ui.allPots.toggle() } }.buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundColor(kMid).padding(.top, 4) }
