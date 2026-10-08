@@ -177,7 +177,13 @@ var pet: String {
     return randomDay.pet
 }
 /// "random": every buddy in turn, animals and avatars, one per day.
-func randomPet(day: Int) -> String { pets[day % pets.count].name }
+/// The buddies "random" and Shuffle pick from: all of them, minus buddy.json "skipBuddies" (e.g. ["robot"]).
+var shufflePool: [String] {
+    let skip = config["skipBuddies"] as? [String] ?? []
+    let pool = pets.map(\.name).filter { !skip.contains($0) }
+    return pool.isEmpty ? pets.map(\.name) : pool
+}
+func randomPet(day: Int) -> String { shufflePool[day % shufflePool.count] }
 var randomDay = (at: Date.distantPast, pet: "cat")
 /// Your pick: right-click → Buddy, or "pet" in buddy.json. Read once, then kept here.
 var petChoice = UserDefaults.standard.string(forKey: "bit.pet") ?? config["pet"] as? String ?? "cat"
