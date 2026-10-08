@@ -197,7 +197,7 @@ struct GlassCard: View {
                         Button { activate(st) } label: {
                             Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12, weight: .medium)).foregroundColor(hex(0xe8590c)).lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6).padding(.vertical, 7)
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
                     }
                     ForEach(shown, ) { p in
                         Button { activate(p.s) } label: {

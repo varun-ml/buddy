@@ -184,7 +184,7 @@ struct InkCard: View {
             ForEach(m.stuck) { st in
                 Button { activate(st) } label: {
                     Text("⚠︎ \(st.repo ?? "?") quiet \(st.quietFor) · \(st.activity ?? "")").font(.system(size: 12)).foregroundColor(hex(0xf2994a)).lineLimit(1).frame(height: 30, alignment: .leading)
-                }.buttonStyle(.plain)
+                }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
             }
             ForEach(shown, ) { p in
                 let c = p.s.agent.color

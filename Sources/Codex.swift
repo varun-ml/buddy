@@ -6,6 +6,12 @@ import SwiftUI
 let codexDir = ProcessInfo.processInfo.environment["BIT_CODEX_DIR"] ?? (NSHomeDirectory() as NSString).appendingPathComponent(".codex/sessions")
 
 /// Rollout files touched in the last `hours`, from today's and yesterday's folders.
+/// Codex moves an archived thread's rollout to ~/.codex/archived_sessions.
+func codexArchived(_ id: String) -> Bool {
+    let dir = (home as NSString).appendingPathComponent(".codex/archived_sessions")
+    return ((try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []).contains { $0.contains(id) }
+}
+
 func codexFiles(hours: Double) -> [(path: String, mod: Date)] {
     let fm = FileManager.default
     let f = DateFormatter(); f.dateFormat = "yyyy/MM/dd"

@@ -228,7 +228,7 @@ struct BurrowCard: View {
                             .font(.system(size: 12, weight: .semibold, design: .rounded)).foregroundColor(hex(0xc4542b)).lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 12).padding(.vertical, 8)
                             .background(RoundedRectangle(cornerRadius: 14).fill(hex(0xfdebd9)))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.plain).overlay(alignment: .trailing) { ClearX { m.forget(st) } }
                 }
                 ForEach(shownPots, ) { p in
                     Button { activate(p.s) } label: {

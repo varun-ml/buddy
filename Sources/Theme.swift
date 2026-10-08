@@ -80,6 +80,15 @@ struct ThemeSurface: View {
     }
 }
 
+/// The ✕ on a stuck row: clears a session that ended without telling Buddy.
+struct ClearX: View {
+    var action: () -> Void
+    var body: some View {
+        Button(action: action) { Text("✕").font(.system(size: 11, weight: .bold)).foregroundColor(.secondary).padding(.horizontal, 8).frame(maxHeight: .infinity) }
+            .buttonStyle(.plain).help("Clear this session")
+    }
+}
+
 struct Chip: View {
     var label: String
     var primary = false
