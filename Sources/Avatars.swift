@@ -27,6 +27,7 @@ extension Cat {
         case "wizard": wizardAvatar(p)
         case "astronaut": astronautAvatar(p)
         case "robot": robotAvatar(p)
+        case "stitch": stitchAvatar(p)
         default: heroAvatar(p)
         }
     }
