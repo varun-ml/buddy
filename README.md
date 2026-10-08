@@ -49,9 +49,25 @@ Right-click Buddy → **Theme**.
 | Warm and playful. Your pet walks a little path as you make progress on the week's goal, and a plant grows a leaf for each step of the month. | A frosted macOS widget with big numbers and progress rings. | Dark and precise, for people who live in the terminal. |
 | <img src="docs/burrow.png" width="280"> | <img src="docs/glass.png" width="280"> | <img src="docs/ink.png" width="280"> |
 
-Pick your buddy with right-click → **Buddy**: a **cat**, **pug** or **bear**, or one that isn't an animal: a **caped hero**, a **ninja**, a **wizard**, an **astronaut** or a **robot**, each with five looks and its own tricks (the ninja throws a toy star, the wizard teleports, the astronaut plants a flag when you merge, the robot dances). Or `random` for a different buddy each day. Right-click → **Costume** → *Caped hero* puts any of them in a cape and mask: it glides instead of walking, does a hero landing when you merge, flies off when a PR breaks, and now and then grapples up to the top of your screen.
+## Pick your buddy
 
-**Festivals:** Buddy dresses up on its own from a week before Durga Puja and Diwali to three days after: a red-bordered Pujo drape with kash flowers (it plays the dhak when an agent finishes, does a dhunuchi dance when you merge), or a Diwali kurta and marigold garland (lights diyas, waves a phuljhari, carries a diya after dark). Pick a costume yourself, or *No costume, ever*, and it won't.
+Right-click Buddy → **Buddy**. Three animals, five that aren't, each with five looks. Or `random` for a different one every day.
+
+<p align="center"><img src="docs/buddies.png" width="660" alt="The eight buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut and robot"></p>
+
+Each has its own way of reacting: the hero flies off when a PR breaks, the ninja climbs a rope and throws a toy star, the wizard teleports and floats on a cloud, the astronaut plants a flag when you merge, the robot dances.
+
+<p align="center"><img src="docs/tricks.png" width="900" alt="Tricks: the hero flying, the ninja climbing, the wizard on a cloud, the astronaut's flag, the wizard's staff sparkling, the robot walking"></p>
+
+## Costumes and festivals
+
+Right-click Buddy → **Costume** dresses the cat, pug or bear (the other buddies come dressed):
+
+<p align="center"><img src="docs/costumes.png" width="900" alt="Costumes: a cat as a caped hero and its hero landing, a pug in a Pujo drape playing the dhak, a bear in a Diwali kurta waving a phuljhari"></p>
+
+- **Caped hero:** a cape and mask. It glides instead of walking, does a hero landing when you merge, flies off the screen when a PR breaks, and now and then grapples up to the top of your screen.
+- **Pujo** and **Diwali** switch on by themselves from a week before the festival days to three days after. Pujo: a red-bordered drape and kash flowers; it plays the dhak when an agent finishes and does a dhunuchi dance when you merge. Diwali: a kurta and marigold garland; it lights diyas, waves a phuljhari, and carries a diya after dark.
+- Pick a costume yourself, or *No costume, ever*, and it won't dress up on its own.
 
 ## Everyday use
 
@@ -59,6 +75,7 @@ Pick your buddy with right-click → **Buddy**: a **cat**, **pug** or **bear**, 
 |---|---|
 | See what's going on | Hover over Buddy |
 | Jump to an agent | Click its row or its bubble |
+| Pick a buddy or a costume | Right-click Buddy → *Buddy* or *Costume* |
 | Change theme, set goals, add a task, nap for an hour | Right-click Buddy |
 | Make the card wider | Drag its outer edge |
 | Close Buddy | Right-click → *Close Buddy*. Type `buddy` in Terminal to bring it back |
@@ -112,7 +129,9 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 
 | Setting | What it does |
 |---|---|
-| `pet` | `cat`, `pug`, `bear` or `random` |
+| `pet` | `cat`, `pug`, `bear`, `hero`, `ninja`, `wizard`, `astronaut`, `robot`, or `random` (a different one each day). The right-click menu overrides it. |
+| `costume` | `hero`, `durga`, `diwali`, `off` (never), or leave it out to dress up for festivals on its own. Cat, pug and bear only. |
+| `outfit` | `none` takes off the pug's tracksuit and shades |
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |
