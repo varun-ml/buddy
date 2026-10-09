@@ -409,7 +409,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.setFrameOrigin(f.origin)
             return
         }
-        let canWalk = !m.expanded && !m.hovering && m.mood != .asleep && m.mood != .upset && m.waiting.isEmpty   // stays put only for a real need (your OK, a red PR); a quiet session alone is often just a long task
+        let canWalk = !m.expanded && !m.hovering && m.mood != .asleep && m.waiting.isEmpty   // stays put only for your OK; a red PR shows on the face and the badge, and can sit red for hours
         guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
         var f = panel.frame
         if target == nil {
