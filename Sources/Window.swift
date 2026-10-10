@@ -199,6 +199,7 @@ struct PetView: View {
                         Button("Open task list") { openText(tasksPath) }
                         Divider()
                         Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
+                        Button((m.trackingSwitches ? "✓ " : "") + "Track app switching") { m.toggleSwitchTracking() }
                         Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
                     }
                     Divider()
@@ -252,6 +253,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var screen: NSRect { (panel.screen ?? NSScreen.main!).visibleFrame }
 
     func applicationDidFinishLaunching(_ n: Notification) {
+        model.watchSwitches()
         NSApp.setActivationPolicy(.accessory)
         let s = NSScreen.main!.visibleFrame
         panel = Panel(contentRect: NSRect(x: s.maxX - small.width - 12, y: s.minY + 110, width: small.width, height: small.height),
@@ -415,16 +417,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.setFrameOrigin(f.origin)
             return
         }
-        let canWalk = !m.expanded && !m.hovering && m.mood != .asleep && m.waiting.isEmpty   // stays put only for your OK; a red PR shows on the face and the badge, and can sit red for hours
+        let canWalk = !m.expanded && !m.hovering && !m.snoozed   // always on the move; stands still only under your cursor, with the card open, or napping
         guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
         var f = panel.frame
         if target == nil {
-            guard Int.random(in: 0..<16) == 0 else { return }  // ~every 8 s at 2 Hz, decide to stroll
             target = CGFloat.random(in: (screen.minX + 10)...(screen.maxX - small.width - 10))
         }
         guard let t = target else { return }
         let dx = t - f.minX
-        if abs(dx) < 2 { target = nil; m.walking = false; return }
+        if abs(dx) < 2 { target = nil; return }   // straight on to the next spot, no standing around
         if !m.walking { m.walking = true }
         if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
         let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya

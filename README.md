@@ -102,6 +102,12 @@ Claude Code / Codex  ──hook──▶  beat.py  ──writes──▶  ~/.cla
 
 Right-click Buddy → **🔒 Privacy mode**, for screen sharing and demos. Bubbles say only what kind of thing happened (*"A session needs your OK"*, *"Done ✨"*), never a repo, a prompt or a PR title. Chatter that names people or work stays quiet, and the card doesn't open on hover. Sounds and the click-to-jump still work. It stays on until you turn it off.
 
+## Switch tracking (off by default)
+
+Right-click Buddy → *Personal* → **Track app switching** if you want help with overwhelm. Buddy then counts how often the front app changes, and between which two apps, per hour. That's all: app names only, no window titles, tabs, URLs or screen contents, no timestamps finer than the hour, kept 7 days on your Mac, and forgotten the moment you turn it off. macOS tells every app which app is in front, so it needs no permission.
+
+At most once an hour it may say *"You switched apps 140 times in the last hour. Mostly Chrome ↔ Slack. Close or mute one of them for 30 minutes?"*, or, from your agents, *"You've jumped between 7 agent sessions in 2 hours. Finish two before you start another?"*
+
 ## What it asks permission for
 
 macOS may ask you three things. All are optional; Buddy works without them.
@@ -159,6 +165,8 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |
 | `claudeLimits` | Show your Claude plan usage (default off; see *What it asks permission for*) |
+| `switchesPerHour` | App switches in an hour before Buddy suggests calming down (default 120; needs switch tracking on) |
+| `sessionsPer2h` | Agent sessions touched in 2 hours before Buddy suggests finishing some (default 6; needs switch tracking on) |
 | `statsRepos` | GitHub repos for your merged/opened PR counts and a team leaderboard (needs `gh`) |
 
 ## Requirements

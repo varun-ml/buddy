@@ -31,6 +31,10 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-14") == "diwali" && fd("2026-11-15") == nil)
     precondition(breath(0) == (0, true) && abs(breath(3.99).fill - 1) < 0.01 && !breath(5).inhaling && breath(9.99).fill < 0.01 && breath(10) == (0, true))   // 4 s in, 6 s out
     precondition(Set((0..<pets.count).map { randomPet(day: $0) }) == Set(shufflePool))   // random visits every buddy in the pool
+    let t0 = switchHour.date(from: "2026-10-10 14")!.addingTimeInterval(30 * 60)   // switch tracking: hourly counts, unordered pairs, 7 days
+    var sl = logSwitch([:], from: "Slack", to: "Chrome", at: t0); sl = logSwitch(sl, from: "Chrome", to: "Slack", at: t0); sl = logSwitch(sl, from: "Mail", to: "Chrome", at: t0)
+    precondition(sl["2026-10-10 14"]?["_n"] == 3 && sl["2026-10-10 14"]?["Chrome ↔ Slack"] == 2 && lastHour(sl, at: t0) == (3, "Chrome ↔ Slack"))
+    precondition(lastHour(sl, at: t0.addingTimeInterval(3600)).n == 1 && logSwitch(sl, from: "A", to: "B", at: t0.addingTimeInterval(8 * 86400)).count == 1)
     let pv = Model(); pv.privacy = true   // privacy mode: an event keeps only its kind, chatter stays quiet
     pv.say("st-pauls is done", .calm); precondition(pv.bubble?.text == "🔒" && privateText(.waiting) == "A session needs your OK")
     pv.bubble = nil; pv.say("Call your mum", .calm, kind: .ambient); precondition(pv.bubble == nil)
@@ -130,7 +134,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             costume = "off"; forcedPet = p
             let models: [Model] = moves.map { pose in
                 let pm = Model(); pm.breedIndex = 0
-                if let (g, t) = pose, t == -2 { return pm }   // no sessions: asleep
+                if let (_, t) = pose, t == -2 { pm.snoozedUntil = Date().addingTimeInterval(3600); return pm }   // napping
                 pm.sessions = [Session(id: "w", state: "working", ts: now)]
                 if let (g, t) = pose { if t < 0 { pm.walking = true } else { pm.gesture = g; pm.gestureAt = frozenNow!.addingTimeInterval(-t) } }
                 return pm

@@ -20,6 +20,7 @@ final class Model: ObservableObject {
     @Published var workedToday: TimeInterval = UserDefaults.standard.double(forKey: "bit.\(Day.key).active")   // time at the keyboard today
     var sinceBreak: TimeInterval? { workingSince.map { Date().timeIntervalSince($0) } }
     var lastBreakNudge = Date.distantPast
+    var lastSwitchNudge = Date.distantPast
     var lastJuggleNudge = Date.distantPast
     var lastStopNudge = Date.distantPast
     @Published var diskFreeGB: Double = -1
@@ -277,8 +278,7 @@ final class Model: ObservableObject {
         if !needsYouPRs.isEmpty { return .upset }
         if !waiting.isEmpty || !stuck.isEmpty { return .waiting }
         if !working.isEmpty { return .busy }
-        if !sessions.isEmpty { return .calm }
-        return .asleep
+        return .calm   // asleep only when you put it down for a nap
     }
 
     var headline: String {
@@ -538,7 +538,7 @@ final class Model: ObservableObject {
         life = loadLife()   // edits to the files apply within 30 s, no restart
         let t = loadTasks(); if t != tasks { tasks = t }
         guard !snoozed, bubble == nil, !showCard, !micInUse() else { return }   // mic on = you're in a call
-        if lifeNudge(now) || relaxNudge(now) { return }
+        if lifeNudge(now) || relaxNudge(now) || switchNudge(now) { return }
 
         // break nudge: 90 min straight (buddy.json "breakMins"), then every 30 min until you take one
         if !relaxing, now.timeIntervalSince(workingSince!) >= Double(config["breakMins"] as? Int ?? 90) * 60, now.timeIntervalSince(lastBreakNudge) >= 30 * 60 {
