@@ -44,7 +44,8 @@ extension Model {
     func watchSwitches() {
         var last = NSWorkspace.shared.frontmostApplication?.localizedName
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] n in
-            guard let app = (n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication)?.localizedName else { return }
+            // only apps with a Dock icon: notification banners, menu-bar helpers and system prompts don't count as a switch
+            guard let ra = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication, ra.activationPolicy == .regular, let app = ra.localizedName else { return }
             defer { last = app }
             guard let self, self.trackingSwitches, let from = last, from != app, app != "Buddy", from != "Buddy" else { return }
             let log = UserDefaults.standard.dictionary(forKey: "bit.switches") as? SwitchLog ?? [:]
