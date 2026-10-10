@@ -33,7 +33,7 @@ struct BubbleView: View {
                         if bubble.text.contains("Write it down once?"), let rule = m.scoldRule {
                             Chip(label: "Copy rule", primary: true) { m.copy(rule); m.flash = "Rule copied 📋" }
                         } else {
-                            Chip(label: "More") { m.bubble = nil; m.showCard = true; m.onExpandChange?() }
+                            if !m.privacy { Chip(label: "More") { m.bubble = nil; m.showCard = true; m.onExpandChange?() } }
                         }
                         if let f = m.flash { Text(f).font(.system(size: 10, weight: .semibold, design: T.design)).foregroundColor(Mood.happy.color) }
                     }.padding(.top, 2)
@@ -172,6 +172,7 @@ struct PetView: View {
                 .contextMenu {
                     Button(m.breathing ? "End the break" : m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
                     Button((m.relaxing ? "✓ " : "") + "🌿 Relax mode") { m.toggleRelax() }
+                    Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
                     if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
                     Divider()
                     Button("🎲 Shuffle buddy") { m.shuffle() }
@@ -216,7 +217,7 @@ struct PetView: View {
         if catHover {
             // dwell: a cat walking under a resting cursor must not pop the card open
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                guard catHover, !m.showCard else { return }
+                guard catHover, !m.showCard, !m.privacy else { return }   // privacy mode: the card stays closed
                 m.bubble = nil; m.pose = .none; m.tab = "work"; m.showCard = true; m.onExpandChange?()
             }
         } else {

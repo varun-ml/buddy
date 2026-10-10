@@ -85,6 +85,23 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 | Make the card wider | Drag its outer edge |
 | Close Buddy | Right-click → *Close Buddy*. Type `buddy` in Terminal to bring it back |
 
+## How it works
+
+**Fully vibe coded.** Buddy is a fun side project from the team at Fermi, built end to end with Claude Code (and a bear from a teammate). Running it is a different story: Buddy never calls a model, never reads your code, and never sends your prompts anywhere. It is a small native Mac app (Swift) plus one Python script.
+
+```
+Claude Code / Codex  ──hook──▶  beat.py  ──writes──▶  ~/.claude/pet/sessions/<id>.json  ◀──reads every 2 s──  Buddy
+```
+
+1. **Hooks, not plugins.** `install.sh` adds `beat.py` to the hook settings of Claude Code (`~/.claude/settings.json`) and Codex (`~/.codex/hooks.json`), next to any hooks you already have. The agent runs it on its own events: you send a prompt, a tool is about to run, it needs your OK, it finishes. Uninstalling removes only those lines.
+2. **beat.py** writes one small JSON file per session: its folder, branch, state (working, waiting, finished), the last tool's name, your prompt, and the agent's last line. It never blocks the agent; if anything goes wrong it exits quietly.
+3. **Buddy** reads those files and draws the pet, bubbles and card. For today's counts it also reads the agents' own local transcripts (`~/.claude/projects`, `~/.codex/sessions`) to count sessions and prompts. Nothing is copied out of them.
+4. **Clicking a bubble** brings that session's app to the front (the desktop app, or Terminal / iTerm through AppleScript).
+
+## Privacy mode
+
+Right-click Buddy → **🔒 Privacy mode**, for screen sharing and demos. Bubbles say only what kind of thing happened (*"A session needs your OK"*, *"Done ✨"*), never a repo, a prompt or a PR title. Chatter that names people or work stays quiet, and the card doesn't open on hover. Sounds and the click-to-jump still work. It stays on until you turn it off.
+
 ## What it asks permission for
 
 macOS may ask you three things. All are optional; Buddy works without them.
