@@ -87,7 +87,7 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 
 ## How it works
 
-**No LLMs were harmed in the making of this pet.** Buddy never calls a model, never reads your code, and never sends your prompts anywhere. It is a small native Mac app (Swift) plus one Python script.
+**Fully vibe coded.** Buddy is a fun side project from the team at Fermi, built end to end with Claude Code (and a bear from a teammate). Running it is a different story: Buddy never calls a model, never reads your code, and never sends your prompts anywhere. It is a small native Mac app (Swift) plus one Python script.
 
 ```
 Claude Code / Codex  ──hook──▶  beat.py  ──writes──▶  ~/.claude/pet/sessions/<id>.json  ◀──reads every 2 s──  Buddy
