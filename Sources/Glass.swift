@@ -233,6 +233,10 @@ struct GlassCard: View {
                             Text(s.rankText).font(.system(size: 15, weight: .semibold)).foregroundColor(gBlue)
                             Text("you · \(s.myCount)").font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1)
                         }.frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 1) {   // the team's total today, all authors
+                            Text("👥 \(s.teamTotal)").font(.system(size: 15, weight: .semibold))
+                            Text("team").font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }.help("PRs merged by the team: \(s.teamTotal) in all")
             }

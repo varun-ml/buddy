@@ -231,6 +231,10 @@ struct InkCard: View {
                         Text(s.rankText).font(.system(size: 13, weight: .semibold)).foregroundColor(kIndigo)
                         Text("you · \(s.myCount)").font(.system(size: 11)).foregroundColor(kSub).lineLimit(1)
                     }.frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 1) {   // the team's total today, all authors
+                        Text("👥 \(s.teamTotal)").font(.system(size: 13, weight: .semibold)).monospacedDigit()
+                        Text("team").font(.system(size: 11)).foregroundColor(kSub).lineLimit(1)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
                 }.padding(.top, 12).help("PRs merged by the team: \(s.teamTotal) in all")
             }
 
