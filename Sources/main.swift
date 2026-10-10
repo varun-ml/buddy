@@ -45,6 +45,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     q.bubble = nil; q.snoozedUntil = Date().addingTimeInterval(60); q.sayNext(); precondition(q.bubble == nil)
     q.snoozedUntil = nil; q.sayNext(); precondition(q.bubble?.text == "selftest b")
     q.bubble = nil; q.sayNext(); precondition(q.bubble == nil)
+    var good = Stats(); good.me = "me"; good.merged = 4; good.team = [("ana", 9)]; good.teamTotal = 12   // a failed GitHub call keeps the last good numbers
+    let kept = keepGood(Stats(), old: good, okMe: false, okTeam: false)
+    precondition(kept.merged == 4 && kept.teamTotal == 12 && kept.team.count == 1 && keepGood(Stats(), old: good, okMe: true, okTeam: true).teamTotal == 0)
     let co = Model(); co.relaxUntil = nil; co.privacy = false   // several "done" waiting at once: one bubble; the inbox keeps each (your own relax/privacy settings would change that)
     co.say("selftest x", .calm); co.say("a is done", .calm, group: "a"); co.say("b is done", .calm, group: "b"); co.say("c is done", .calm, group: "c")
     co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
