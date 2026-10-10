@@ -170,31 +170,36 @@ struct PetView: View {
                     if h { petTimer = Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in m.hearts += 1 } }
                 }
                 .contextMenu {
-                    Button(m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
+                    Button(m.breathing ? "End the break" : m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
+                    Button((m.relaxing ? "✓ " : "") + "🌿 Relax mode") { m.toggleRelax() }
+                    if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
                     Divider()
-                    Menu("Theme") {
-                        ForEach(["burrow", "glass", "ink"], id: \.self) { n in
-                            Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
-                        }
-                    }
                     Button("🎲 Shuffle buddy") { m.shuffle() }
-                    Menu("Buddy") {
-                        ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
-                            Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }
+                    Menu("Look") {
+                        Menu("Buddy") {
+                            ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
+                                Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }
+                            }
+                        }
+                        Menu("Costume") {
+                            ForEach(costumes, id: \.0) { c in
+                                Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
+                            }
+                        }
+                        Menu("Theme") {
+                            ForEach(["burrow", "glass", "ink"], id: \.self) { n in
+                                Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
+                            }
                         }
                     }
-                    Menu("Costume") {
-                        ForEach(costumes, id: \.0) { c in
-                            Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
-                        }
+                    Menu("Personal") {
+                        Button("Set goals…") { DispatchQueue.main.async { m.setGoals() } }
+                        Button("Add task…") { DispatchQueue.main.async { m.addTask() } }
+                        Button("Open task list") { openText(tasksPath) }
+                        Divider()
+                        Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
+                        Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
                     }
-                    Button("Set goals…") { DispatchQueue.main.async { m.setGoals() } }
-                    Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
-                    Button("Add task…") { DispatchQueue.main.async { m.addTask() } }
-                    Button("Open task list") { openText(tasksPath) }
-                    Divider()
-                    Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
-                    if m.life != nil { Button("Edit profile file") { openText(lifePath) } }
                     Divider()
                     Button("Close Buddy") { NSApp.terminate(nil) }   // exit 0: launchd leaves it closed until next login
                 }
@@ -421,7 +426,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if abs(dx) < 2 { target = nil; m.walking = false; return }
         if !m.walking { m.walking = true }
         if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
-        let pace: CGFloat = wearing == "diwali" && evening ? 0.9 : 1.3   // careful steps with a lit diya
+        let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
+        if m.relaxing && Int.random(in: 0..<600) == 0 { m.leaves += 1 }   // ~every 20 s of walking, a leaf drifts past
         f.origin.x += dx > 0 ? min(pace, dx) : max(-pace, dx)
         panel.setFrameOrigin(f.origin)
     }

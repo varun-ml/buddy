@@ -36,13 +36,13 @@ That's the whole install. Buddy builds on your Mac in about a minute and starts 
 
 - **Goals for today, this week and this month.** Click to tick them off or count them up (*"Talk to 5 customers: 2 of 5"*).
 - **One simple to-do list.** Add due dates; Buddy sorts it. Hover any item for "not today".
-- **The people who matter.** Birthdays, a nudge to call your mum on Sundays, your kid's bedtime. Right-click Buddy → *Set up my profile…* and answer a few questions.
+- **The people who matter.** Birthdays, a nudge to call your mum on Sundays, your kid's bedtime. Right-click Buddy → *Personal* → *Set up my profile…* and answer a few questions.
 
 The card always opens on Work; Personal is one click away.
 
 ## Three looks
 
-Right-click Buddy → **Theme**.
+Right-click Buddy → **Look** → **Theme**.
 
 | Burrow | Glass | Ink |
 |---|---|---|
@@ -51,7 +51,7 @@ Right-click Buddy → **Theme**.
 
 ## Pick your buddy
 
-Right-click Buddy → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day, or right-click → **🎲 Shuffle buddy** for a new one right now. Don't like one? Leave it out of both with `"skipBuddies": ["robot"]` in `~/.config/buddy.json`.
+Right-click Buddy → **Look** → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day, or right-click → **🎲 Shuffle buddy** for a new one right now. Don't like one? Leave it out of both with `"skipBuddies": ["robot"]` in `~/.config/buddy.json`.
 
 <p align="center"><img src="docs/buddies.png" width="660" alt="The eight buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut and robot"></p>
 
@@ -61,7 +61,7 @@ Each has its own way of reacting: the hero flies off when a PR breaks, the ninja
 
 ## Costumes and festivals
 
-Right-click Buddy → **Costume** dresses the cat, pug or bear (the other buddies come dressed):
+Right-click Buddy → **Look** → **Costume** dresses the cat, pug or bear (the other buddies come dressed):
 
 <p align="center"><img src="docs/costumes.png" width="900" alt="Costumes: a cat as a caped hero and its hero landing, a pug in a Pujo drape playing the dhak, a bear in a Diwali kurta waving a phuljhari"></p>
 
@@ -69,14 +69,19 @@ Right-click Buddy → **Costume** dresses the cat, pug or bear (the other buddie
 - **Pujo** and **Diwali** switch on by themselves from a week before the festival days to three days after. Pujo: a red-bordered drape and kash flowers; it plays the dhak when an agent finishes and does a dhunuchi dance when you merge. Diwali: a kurta and marigold garland; it lights diyas, waves a phuljhari, and carries a diya after dark.
 - Pick a costume yourself, or *No costume, ever*, and it won't dress up on its own.
 
+## Relax mode
+
+Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slower with leaves drifting past, takes sleepy little stretches and naps, and swaps work chatter (merge counts, the leaderboard) for calm quotes. Every 2 hours a soft chime offers a break: tap the bubble, or right-click → *Breathe for 2 minutes*, and Buddy naps inside a ring that grows and shrinks (4 s in, 6 s out) over soft rain-like noise it makes itself. A session waiting for your OK and a red PR still get through.
+
 ## Everyday use
 
 | You want to… | Do this |
 |---|---|
 | See what's going on | Hover over Buddy |
 | Jump to an agent | Click its row or its bubble |
-| Pick a buddy or a costume | Right-click Buddy → *Buddy* or *Costume* |
-| Change theme, set goals, add a task, nap for an hour | Right-click Buddy |
+| Pick a buddy, costume or theme | Right-click Buddy → *Look* |
+| Set goals, add a task, update your profile | Right-click Buddy → *Personal* |
+| Nap for an hour, or relax mode | Right-click Buddy |
 | Make the card wider | Drag its outer edge |
 | Close Buddy | Right-click → *Close Buddy*. Type `buddy` in Terminal to bring it back |
 

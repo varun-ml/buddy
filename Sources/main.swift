@@ -29,6 +29,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let fd = { (d: String) in festival(on: isoDay.date(from: d)!) }   // a week before the festival days to three days after
     precondition(fd("2026-10-09") == nil && fd("2026-10-10") == "durga" && fd("2026-10-24") == "durga" && fd("2026-10-25") == nil)
     precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-14") == "diwali" && fd("2026-11-15") == nil)
+    precondition(breath(0) == (0, true) && abs(breath(3.99).fill - 1) < 0.01 && !breath(5).inhaling && breath(9.99).fill < 0.01 && breath(10) == (0, true))   // 4 s in, 6 s out
     precondition(Set((0..<pets.count).map { randomPet(day: $0) }) == Set(shufflePool))   // random visits every buddy in the pool
     let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
     q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
