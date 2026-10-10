@@ -34,9 +34,17 @@ final class Calm {
     private var engine: AVAudioEngine?
     private var t = 0.0, brown = 0.0, noiseUntil = 0.0, chimeAt = -10.0
 
-    func chime() { start(); chimeAt = t }
-    func ambience(_ seconds: Double) { start(); noiseUntil = t + seconds }
-    func stop() { noiseUntil = t; DispatchQueue.main.asyncAfter(deadline: .now() + 4) { if self.t >= self.noiseUntil, self.t - self.chimeAt > 4 { self.engine?.stop(); self.engine = nil } } }
+    var running: Bool { engine != nil }
+    func chime() { start(); chimeAt = t; offWhenQuiet(after: 4.5) }
+    func ambience(_ seconds: Double) { start(); noiseUntil = t + seconds; offWhenQuiet(after: seconds + 4) }
+    func stop() { noiseUntil = t; offWhenQuiet(after: 4) }
+
+    /// Shut the audio engine once nothing is sounding: left running it keeps an audio thread busy and the device awake.
+    private func offWhenQuiet(after s: Double) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + s) {
+            if self.t >= self.noiseUntil, self.t - self.chimeAt > 4 { self.engine?.stop(); self.engine = nil }
+        }
+    }
 
     private func render(_ frames: Int, _ abl: UnsafeMutablePointer<AudioBufferList>, _ dt: Double) -> OSStatus {
         let bufs = UnsafeMutableAudioBufferListPointer(abl)
