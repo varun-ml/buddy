@@ -439,7 +439,7 @@ final class Model: ObservableObject {
         }
     }
 
-    private func applyStats(_ s: Stats) {
+    func applyStats(_ s: Stats) {
         let first = !statsLoaded
         let prevMerged = stats.merged
         stats = s

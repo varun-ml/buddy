@@ -7,6 +7,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--focus"), i + 2 < CommandLine.
     focusTerminal(CommandLine.arguments[i + 1], tty: CommandLine.arguments[i + 2]); sleep(2); exit(0)
 }
 if CommandLine.arguments.contains("--selftest") {   // the date and time parsing behind birthdays and bedtimes
+    // Your own settings (relax, privacy, ignored sessions…) must not change the answers: the argument domain wins over them,
+    // in memory only, so nothing you saved is touched.
+    UserDefaults.standard.setVolatileDomain(["bit.relax": Date.distantPast, "bit.privacy": false, "bit.switchTracking": false,
+                                             "bit.ignored": [String: Double](), "bit.breed": 0], forName: UserDefaults.argumentDomain)
     precondition(dayMonth("14 Feb") == "14 Feb" && dayMonth("Feb 14") == "14 Feb" && dayMonth("14/02") == "14 Feb" && dayMonth("2019-02-14") == "14 Feb" && dayMonth("June 3") == "3 Jun")
     precondition(dayMonth("banana") == nil)
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
@@ -53,7 +57,30 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
     let st = Model()   // a sticky bubble goes when its reason does (here: no session is waiting)
     st.say("selftest waits", .calm, sticky: "s:gone"); precondition(st.bubble?.sticky == "s:gone"); st.resolveSticky(); precondition(st.bubble == nil)
+    // Regressions we shipped once, each pinned by a check so it can't come back.
+    // The pet stood still: between strolls, while a session waited, with no sessions open, and when a PR was red.
+    precondition(shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 5))
+    precondition(!shouldWalk(expanded: true, hovering: false, snoozed: false, idle: 5) && !shouldWalk(expanded: false, hovering: true, snoozed: false, idle: 5))
+    precondition(!shouldWalk(expanded: false, hovering: false, snoozed: true, idle: 5) && !shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 121))
+    precondition(Model().mood != .asleep)   // no sessions open is not a nap
+    // The "Merged!" bubble and the card disagreed (two counts); now the card's number is the only one.
+    let mc = Model(); mc.statsLoaded = true; var ms = Stats(); ms.merged = 3; mc.applyStats(ms); precondition(mc.mergedToday == 3 && mc.stats.merged == 3)
+    // One failed GitHub call blanked the tiles and the leaderboard.
+    var g2 = Stats(); g2.team = [("ana", 2)]; g2.teamTotal = 2; mc.applyStats(g2); mc.applyStats(keepGood(Stats(), old: mc.stats, okMe: true, okTeam: false))
+    precondition(mc.stats.teamTotal == 2 && !mc.stats.team.isEmpty)
     print("selftest ok"); exit(0)
+}
+var walkFailed = false
+/// How many pixels differ between two renders (for the walk check).
+func pixelsDiffering(_ a: NSImage, _ b: NSImage) -> Int {
+    guard let ra = a.tiffRepresentation.flatMap(NSBitmapImageRep.init), let rb = b.tiffRepresentation.flatMap(NSBitmapImageRep.init),
+          ra.pixelsWide == rb.pixelsWide, ra.pixelsHigh == rb.pixelsHigh, let pa = ra.bitmapData, let pb = rb.bitmapData else { return Int.max }
+    var n = 0
+    for y in 0..<ra.pixelsHigh { for x in 0..<ra.pixelsWide {
+        let ia = y * ra.bytesPerRow + x * ra.bitsPerPixel / 8, ib = y * rb.bytesPerRow + x * rb.bitsPerPixel / 8
+        if abs(Int(pa[ia]) - Int(pb[ib])) + abs(Int(pa[ia + 1]) - Int(pb[ib + 1])) + abs(Int(pa[ia + 2]) - Int(pb[ib + 2])) > 60 { n += 1 }
+    } }
+    return n
 }
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
     // test: render the card in every theme and tab to PNGs, from a fixed made-up profile (never your real one), for before/after checks
@@ -168,6 +195,10 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             }
             frozenTime = 800_000_000
             guard let first = frames.first else { continue }
+            // the walk must show (the wizard once walked with its feet hidden): frames 1 and 4 are the same height in the bob
+            // (step +0.87 and -0.87), so only the legs and arms can differ between them
+            let moved = frames.count == 6 ? pixelsDiffering(frames[1], frames[4]) : 0
+            if moved < 300 { print("WALK NOT VISIBLE: \(p) (\(moved) pixels move across a step)"); walkFailed = true }
             let strip = NSImage(size: NSSize(width: first.size.width * CGFloat(frames.count), height: first.size.height))
             strip.lockFocus()
             for (i, f) in frames.enumerated() { f.draw(at: NSPoint(x: CGFloat(i) * first.size.width, y: 0), from: .zero, operation: .copy, fraction: 1) }
@@ -178,7 +209,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         }
         costume = "off"; forcedPet = nil; frozenNow = nil
     }
-    print("snapshots in \(dir)"); exit(0)
+    print("snapshots in \(dir)"); exit(walkFailed ? 1 : 0)
 }
 if CommandLine.arguments.contains("--dump") {
     let t = codexToday()

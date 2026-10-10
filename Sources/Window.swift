@@ -417,9 +417,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.setFrameOrigin(f.origin)
             return
         }
-        // always on the move while you're at the desk; no mouse or key for 2 min = you're away, so it sits and saves the battery
-        let away = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!) > 120
-        let canWalk = !m.expanded && !m.hovering && !m.snoozed && !away
+        let quiet = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
+        let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet)
         guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
         var f = panel.frame
         if target == nil {
@@ -452,4 +451,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let x = model.leftSide ? f.minX : f.maxX - size.width
         panel.setFrame(NSRect(x: x, y: f.minY, width: size.width, height: size.height), display: true, animate: false)
     }
+}
+
+/// Always on the move while you're at the desk. Stands still only under your cursor, with the card open, napping,
+/// or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
+func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double) -> Bool {
+    !expanded && !hovering && !snoozed && idle <= 120
 }

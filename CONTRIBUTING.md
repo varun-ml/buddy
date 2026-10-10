@@ -26,7 +26,9 @@ Thanks for helping! Buddy is small on purpose: a handful of Swift files, one Pyt
 ## Make a change
 
 ```bash
-swiftc -swift-version 5 -O Sources/*.swift -o Buddy && ./Buddy --selftest   # quick check
+./check.sh                                                               # everything a PR must pass (~40 s); CI runs the same
+git config core.hooksPath .githooks                                      # once per clone: run ./check.sh before every push
+swiftc -swift-version 5 -O Sources/*.swift -o Buddy && ./Buddy --selftest   # quick check while you work
 python3 test_beat.py                                                     # the hook
 ./Buddy --snapshot /tmp/after                                            # every theme, tab, pet and coat as PNGs, from a made-up profile
 ./install.sh                                                            # rebuild and restart your own Buddy
@@ -64,4 +66,6 @@ Costumes are drawn over any pet (`Sources/Costume.swift`): the caped hero is the
 
 - Everything stays on the user's Mac. No telemetry, no new network calls without a setting that turns them on.
 - No dependencies.
-- CI builds every PR, runs the self-test and the hook test, and attaches card and pet images from before and after your change, with a table of which views changed. Check that table matches what you meant to change.
+- **Every bug that ships gets a check.** Fixing a regression? Add a line to the self-test (`Sources/main.swift`, under "Regressions we shipped once") that fails without your fix. Keep logic you want to test in plain functions (like `shouldWalk`), not inside views or timers.
+- The self-test must not depend on your own settings: it runs with relax, privacy and the rest switched off in memory.
+- CI runs `./check.sh` on every PR, and attaches card and pet images from before and after your change, with a table of which views changed. Check that table matches what you meant to change.
