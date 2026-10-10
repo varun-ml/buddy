@@ -417,7 +417,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             panel.setFrameOrigin(f.origin)
             return
         }
-        let canWalk = !m.expanded && !m.hovering && !m.snoozed   // always on the move; stands still only under your cursor, with the card open, or napping
+        // always on the move while you're at the desk; no mouse or key for 2 min = you're away, so it sits and saves the battery
+        let away = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!) > 120
+        let canWalk = !m.expanded && !m.hovering && !m.snoozed && !away
         guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
         var f = panel.frame
         if target == nil {
