@@ -39,6 +39,7 @@ final class Model: ObservableObject {
     @Published var hearts = 0
     @Published var relaxUntil = UserDefaults.standard.object(forKey: "bit.relax") as? Date   // relax mode (Relax.swift), until midnight
     @Published var breakUntil: Date?   // a 2-minute breathing break
+    @Published var privacy = UserDefaults.standard.bool(forKey: "bit.privacy")   // privacy mode: no names on screen, no card
     @Published var leaves = 0          // a leaf drifts past (relax mode walk)
     @Published var busyAction: String?
     @Published var hovering = false
@@ -297,6 +298,9 @@ final class Model: ObservableObject {
 
     func say(_ text: String, _ tone: Mood, seconds: Double = 10, kind: BubbleKind = .event, byline: String? = nil,
              pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, cue: Cue? = nil, action: (() -> Void)? = nil) {
+        // privacy mode (screen sharing): events say only what kind of thing happened; chatter that names people or work stays quiet
+        if privacy && (kind == .ambient || kind == .thought) { return }
+        let text = privacy && kind == .event ? privateText(tone) : text
         let napping = snoozed && tone != .happy
         if (napping || squatting) && kind != .event { return }
         if !napping {
@@ -726,10 +730,27 @@ final class Model: ObservableObject {
         }
     }
 
+    func togglePrivacy() {
+        privacy.toggle()
+        UserDefaults.standard.set(privacy, forKey: "bit.privacy")
+        bubble = nil; waitingToSay.removeAll()   // nothing already queued shows its words
+        if privacy { showCard = false; onExpandChange?() }
+    }
+
     func toggleSnooze() {
         if breathing { endBreak(quiet: true); return }
         snoozedUntil = snoozed ? nil : Date().addingTimeInterval(3600)
         if snoozed { bubble = nil }
         onExpandChange?()
+    }
+}
+
+/// What an event bubble says in privacy mode: the kind of thing, never a repo, a prompt or a PR title.
+func privateText(_ tone: Mood) -> String {
+    switch tone {
+    case .waiting: return "A session needs your OK"
+    case .upset: return "Something needs a fix"
+    case .happy: return "Done ✨"
+    default: return "🔒"
     }
 }

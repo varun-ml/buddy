@@ -31,6 +31,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-14") == "diwali" && fd("2026-11-15") == nil)
     precondition(breath(0) == (0, true) && abs(breath(3.99).fill - 1) < 0.01 && !breath(5).inhaling && breath(9.99).fill < 0.01 && breath(10) == (0, true))   // 4 s in, 6 s out
     precondition(Set((0..<pets.count).map { randomPet(day: $0) }) == Set(shufflePool))   // random visits every buddy in the pool
+    let pv = Model(); pv.privacy = true   // privacy mode: an event keeps only its kind, chatter stays quiet
+    pv.say("st-pauls is done", .calm); precondition(pv.bubble?.text == "🔒" && privateText(.waiting) == "A session needs your OK")
+    pv.bubble = nil; pv.say("Call your mum", .calm, kind: .ambient); precondition(pv.bubble == nil)
     let q = Model()   // events wait for the card, the current alert and a nap, then show in order; none are dropped
     q.showCard = true; q.say("selftest a", .calm); precondition(q.bubble == nil)
     q.showCard = false; q.sayNext(); precondition(q.bubble?.text == "selftest a")
