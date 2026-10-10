@@ -41,7 +41,9 @@ final class Model: ObservableObject {
     @Published var relaxUntil = UserDefaults.standard.object(forKey: "bit.relax") as? Date   // relax mode (Relax.swift), until midnight
     @Published var breakUntil: Date?   // a 2-minute breathing break
     @Published var privacy = UserDefaults.standard.bool(forKey: "bit.privacy")   // privacy mode: no names on screen, no card
-    @Published var leaves = 0          // a leaf drifts past (relax mode walk)
+    @Published var leaves = 0
+    @Published var notices: [Bubble] = []          // the card's inbox: every event today, newest first
+    var noticesSeenAt = Date()                       // inbox items after this are new (set when the card closes)          // a leaf drifts past (relax mode walk)
     @Published var busyAction: String?
     @Published var hovering = false
     @Published var walking = false
@@ -292,12 +294,13 @@ final class Model: ObservableObject {
         return mergedToday > 0 ? "All clear. \(mergedToday) merged today" : "All clear"
     }
 
-    /// Events wait here while you nap, the card is open, or another alert is up. Nothing that happened is dropped;
-    /// chatter (quotes, thoughts) is, because it is only worth saying now.
+    /// Events wait here while you nap, the card is open, or another alert is up. Every event is also in `notices` (the card's
+    /// inbox), so nothing that happened is lost even if its bubble never shows; chatter (quotes, thoughts) is only worth saying now.
     private var waitingToSay: [(b: Bubble, seconds: Double, pose: Pose, at: Date)] = []
 
     func say(_ text: String, _ tone: Mood, seconds: Double = 10, kind: BubbleKind = .event, byline: String? = nil,
-             pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, cue: Cue? = nil, action: (() -> Void)? = nil) {
+             pose: Pose = .none, sound: String? = nil, react: ((Bool) -> Void)? = nil, cue: Cue? = nil,
+             sticky: String? = nil, group: String? = nil, action: (() -> Void)? = nil) {
         // privacy mode (screen sharing): events say only what kind of thing happened; chatter that names people or work stays quiet
         if privacy && (kind == .ambient || kind == .thought) { return }
         let text = privacy && kind == .event ? privateText(tone) : text
@@ -312,24 +315,30 @@ final class Model: ObservableObject {
             if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
             if showCard && tone == .happy { celebrate += 1 }
         }
-        let b = Bubble(text: text, tone: tone, kind: kind, byline: byline, action: action, react: react)
+        let b = Bubble(text: text, tone: tone, kind: kind, byline: byline, action: action, react: react, sticky: sticky, group: group)
+        if kind == .event { notice(b) }
+        if kind == .event && relaxing && group != nil { return }   // relax mode: "done" goes to the inbox only; needs-you still shows
         if kind == .event && (napping || showCard || bubble?.kind == .event) {
             waitingToSay.removeAll { $0.b.text == text }
             let item = (b: b, seconds: seconds, pose: pose, at: Date())
             if tone == .waiting || tone == .upset { waitingToSay.insert(item, at: 0) } else { waitingToSay.append(item) }   // needs-you first
-            if waitingToSay.count > 5 { waitingToSay.removeLast() }   // ponytail: cap 5; a burst beyond that is better read in the card
             return
         }
         if showCard { return }   // chatter never covers the card
         show(b, seconds: seconds, pose: pose)
     }
 
-    /// The next waiting event, once nothing is in the way. Called every 2 s; older than 15 min is old news.
+    /// The next waiting event, once nothing is in the way. Called every 2 s. Several finished sessions waiting at once
+    /// become one bubble ("3 done: a, b, c") that opens the inbox; nothing is dropped, the inbox has each one.
     func sayNext() {
-        waitingToSay.removeAll { Date().timeIntervalSince($0.at) > 15 * 60 }
         guard !snoozed, !showCard, bubble == nil, !waitingToSay.isEmpty else { return }
         let w = waitingToSay.removeFirst()
-        show(w.b, seconds: w.seconds, pose: w.pose)
+        let done = w.b.group == nil ? [] : waitingToSay.filter { $0.b.group != nil }
+        guard !done.isEmpty else { show(w.b, seconds: w.seconds, pose: w.pose); return }
+        waitingToSay.removeAll { $0.b.group != nil }
+        let names = ([w] + done).compactMap(\.b.group)
+        let text = privacy ? "\(names.count) done" : "\(names.count) done: " + names.joined(separator: ", ")
+        show(Bubble(text: text, tone: .happy, action: { [weak self] in self?.showCard = true; self?.onExpandChange?() }), seconds: 25, pose: .none)
     }
 
     private func show(_ b: Bubble, seconds: Double, pose: Pose) {
@@ -348,11 +357,21 @@ final class Model: ObservableObject {
         if b.kind == .event && (b.tone == .upset || b.tone == .waiting) { shake += 1 }
         if b.tone == .happy { celebrate += 1 }
         onExpandChange?()
+        armTimer(b, seconds: seconds, pose: pose)
+    }
+
+    private func armTimer(_ b: Bubble, seconds: Double, pose: Pose) {
         bubbleTimer?.invalidate()
         bubbleTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in
-            self?.bubble = nil
-            self?.pose = .none
-            self?.onExpandChange?()
+            guard let self, self.bubble?.id == b.id else { return }
+            // needs you: stays until it resolves or you click it, but takes turns with anything waiting behind it
+            if b.sticky != nil {
+                if self.waitingToSay.isEmpty { self.armTimer(b, seconds: seconds, pose: pose); return }
+                self.waitingToSay.append((b: b, seconds: seconds, pose: pose, at: Date()))
+            }
+            self.bubble = nil
+            self.pose = .none
+            self.onExpandChange?()
         }
     }
 
@@ -600,16 +619,17 @@ final class Model: ObservableObject {
             let name = s.repo ?? "A session"
             if prev != nil, prev != s.state {
                 if s.state == "waiting" {
-                    say("\(s.agent.mark.isEmpty ? "" : s.agent.mark + " ")" + line("waiting", "\(name) wants your OK", ["repo": name]) + "\n\(s.activity ?? "")", .waiting, seconds: 25, action: { activate(s) })
+                    say("\(s.agent.mark.isEmpty ? "" : s.agent.mark + " ")" + line("waiting", "\(name) wants your OK", ["repo": name]) + "\n\(s.activity ?? "")", .waiting, seconds: 25, sticky: "s:\(s.id)", action: { activate(s) })
                 } else if s.state == "finished", prev == "working" {
                     let took = s.turnStart.map { " in \(ago(now - $0))" } ?? ""
                     let mark = s.agent.mark.isEmpty ? "" : s.agent.mark + " "
-                    say(mark + line("done", "\(name) is done\(took). Tap to open ✨", ["repo": name]) + "\n\(s.said ?? s.prompt ?? "")", .happy, seconds: 15, sound: "Pop", cue: .done, action: { activate(s) })
+                    say(mark + line("done", "\(name) is done\(took). Tap to open ✨", ["repo": name]) + "\n\(s.said ?? s.prompt ?? "")", .happy, seconds: 20, sound: "Pop", cue: .done, group: name, action: { activate(s) })
                 }
             }
             lastStates[s.id] = s.state
         }
         if out != sessions { sessions = out }   // publishing redraws everything; only when something changed
+        resolveSticky()
     }
 
     // MARK: PRs (every 2 min)
@@ -653,7 +673,7 @@ final class Model: ObservableObject {
             let prev = lastCI[pr.id]
             if !first, prev != pr.ci {
                 if pr.needsYou {
-                    say(line("red", "Oh no, \(pr.short) broke\nhover me to see why", ["pr": pr.short]), .upset, seconds: 30)
+                    say(line("red", "Oh no, \(pr.short) broke\nhover me to see why", ["pr": pr.short]), .upset, seconds: 30, sticky: "pr:\(pr.id)")
                 } else if pr.ci == "green", prev == "red" || prev == "pending" {
                     say("\(pr.short) is green ✨", .happy, seconds: 8) { NSWorkspace.shared.open(URL(string: pr.url)!) }
                 }
@@ -662,6 +682,7 @@ final class Model: ObservableObject {
         }
         prs = new
         prsCheckedAt = Date()
+        resolveSticky()
         enrich()
         if first {
             if let p = needsYouPRs.first {
@@ -752,5 +773,21 @@ func privateText(_ tone: Mood) -> String {
     case .upset: return "Something needs a fix"
     case .happy: return "Done ✨"
     default: return "🔒"
+    }
+}
+
+extension Model {
+    /// Keep every event for the card's inbox: newest first, today only, the last 100.
+    func notice(_ b: Bubble) {
+        notices = [b] + notices.filter { Calendar.current.isDateInToday($0.at) }.prefix(99)
+    }
+    var unreadNotices: Int { notices.filter { $0.at > noticesSeenAt }.count }
+
+    /// A sticky bubble goes once its reason is gone: the session stopped waiting, or the PR stopped being red.
+    func resolveSticky() {
+        let waitingIds = Set(waiting.map { "s:\($0.id)" }), redIds = Set(needsYouPRs.map { "pr:\($0.id)" })
+        let live = { (k: String) in k.hasPrefix("s:") ? waitingIds.contains(k) : redIds.contains(k) }
+        waitingToSay.removeAll { $0.b.sticky.map { !live($0) } ?? false }
+        if let k = bubble?.sticky, !live(k) { bubble = nil; pose = .none; onExpandChange?() }
     }
 }

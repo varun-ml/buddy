@@ -79,6 +79,7 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 |---|---|
 | See what's going on | Hover over Buddy |
 | Jump to an agent | Click its row or its bubble |
+| See a bubble you missed | Hover over Buddy: the **Inbox** at the top of Work keeps today's last 100 events. "Wants your OK" and red-PR bubbles stay up until they're handled |
 | Pick a buddy, costume or theme | Right-click Buddy → *Look* |
 | Set goals, add a task, update your profile | Right-click Buddy → *Personal* |
 | Nap for an hour, or relax mode | Right-click Buddy |

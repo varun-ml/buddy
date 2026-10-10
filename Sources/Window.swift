@@ -223,7 +223,7 @@ struct PetView: View {
             }
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.showCard = false; m.showStale = false; m.hoverEnded(); m.onExpandChange?() }
+                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.showCard = false; m.showStale = false; m.noticesSeenAt = Date(); m.hoverEnded(); m.onExpandChange?() }
             }
         }
     }

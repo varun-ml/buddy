@@ -45,6 +45,11 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     q.bubble = nil; q.snoozedUntil = Date().addingTimeInterval(60); q.sayNext(); precondition(q.bubble == nil)
     q.snoozedUntil = nil; q.sayNext(); precondition(q.bubble?.text == "selftest b")
     q.bubble = nil; q.sayNext(); precondition(q.bubble == nil)
+    let co = Model()   // several "done" waiting at once: one bubble; the inbox keeps each
+    co.say("selftest x", .calm); co.say("a is done", .calm, group: "a"); co.say("b is done", .calm, group: "b"); co.say("c is done", .calm, group: "c")
+    co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
+    let st = Model()   // a sticky bubble goes when its reason does (here: no session is waiting)
+    st.say("selftest waits", .calm, sticky: "s:gone"); precondition(st.bubble?.sticky == "s:gone"); st.resolveSticky(); precondition(st.bubble == nil)
     print("selftest ok"); exit(0)
 }
 if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLine.arguments.count {
@@ -77,6 +82,8 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
                Todo(text: "Update CV", area: "career", line: "- [ ] c")]
     m.history = [Bubble(text: "“Waste no more time arguing what a good man should be. Be one.”", tone: .calm, kind: .quote, byline: "— Marcus Aurelius")]
     m.breedIndex = 0; m.cardWidth = 360
+    m.notices = [Bubble(text: "onboarding is done in 4m. Tap to open ✨", tone: .happy), Bubble(text: "pricing-page wants your OK", tone: .waiting)]
+    m.noticesSeenAt = .distantPast
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
     MainActor.assumeIsolated { for th in ["burrow", "glass", "ink"] { for tab in ["work", "personal"] {
         T = themes[th]!; m.themeName = th; m.tab = tab
