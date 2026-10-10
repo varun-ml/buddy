@@ -395,7 +395,7 @@ final class Model: ObservableObject {
              opened: search(query:"is:pr author:@me created:>=\(from) \(repos)",type:ISSUE){issueCount}
              yest: search(query:"is:pr author:@me is:merged merged:\(yFrom)..\(from) \(repos)",type:ISSUE){issueCount} }
             """
-            var s = Stats()
+            var s = Stats(), okMe = false, okTeam = statsRepos.isEmpty
             if let d = gh(["api", "graphql", "-f", "query=\(q)"]),
                let root = (try? JSONSerialization.jsonObject(with: d) as? [String: Any])?["data"] as? [String: Any] {
                 let count = { (k: String) in (root[k] as? [String: Any])?["issueCount"] as? Int }
@@ -403,6 +403,7 @@ final class Model: ObservableObject {
                 s.merged = count("merged") ?? 0
                 s.opened = count("opened") ?? 0
                 s.yesterdayMerged = count("yest")
+                okMe = root["merged"] != nil
             }
             // the team: every merged PR today, 100 per page (a busy day is 150+; one page dropped the rest)
             var by: [String: Int] = [:], after = "", total = 0
@@ -412,7 +413,7 @@ final class Model: ObservableObject {
                       let r = ((try? JSONSerialization.jsonObject(with: d) as? [String: Any])?["data"] as? [String: Any])?["search"] as? [String: Any] else { break }
                 total = r["issueCount"] as? Int ?? total
                 for n in (r["nodes"] as? [[String: Any]]) ?? [] { if let l = (n["author"] as? [String: Any])?["login"] as? String { by[l, default: 0] += 1 } }
-                guard let pi = r["pageInfo"] as? [String: Any], pi["hasNextPage"] as? Bool == true, let c = pi["endCursor"] as? String else { break }
+                guard let pi = r["pageInfo"] as? [String: Any], pi["hasNextPage"] as? Bool == true, let c = pi["endCursor"] as? String else { okTeam = true; break }
                 after = ",after:\"\(c)\""
             }
             s.teamTotal = total
@@ -430,7 +431,11 @@ final class Model: ObservableObject {
             let cx = codexToday()
             s.codexSessions = cx.sessions; s.codexPrompts = cx.prompts
             s.sessions += cx.sessions; s.prompts += cx.prompts
-            DispatchQueue.main.async { self.applyStats(s) }
+            DispatchQueue.main.async {
+                // a failed GitHub call keeps the last good numbers instead of blanking the tiles and the leaderboard; try again in a minute
+                self.applyStats(keepGood(s, old: self.stats, okMe: okMe, okTeam: okTeam))
+                if !okMe || !okTeam { DispatchQueue.main.asyncAfter(deadline: .now() + 60) { self.loadStats() } }
+            }
         }
     }
 
@@ -790,4 +795,12 @@ extension Model {
         waitingToSay.removeAll { $0.b.sticky.map { !live($0) } ?? false }
         if let k = bubble?.sticky, !live(k) { bubble = nil; pose = .none; onExpandChange?() }
     }
+}
+
+/// New stats, except the parts whose GitHub call failed, which keep their last good values.
+func keepGood(_ new: Stats, old: Stats, okMe: Bool, okTeam: Bool) -> Stats {
+    var s = new
+    if !okMe { s.me = old.me; s.merged = old.merged; s.opened = old.opened; s.yesterdayMerged = old.yesterdayMerged }
+    if !okTeam { s.team = old.team; s.teamTotal = old.teamTotal }
+    return s
 }
