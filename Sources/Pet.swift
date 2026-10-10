@@ -148,7 +148,7 @@ struct Cat: View {
     var mood: Mood { m.squatting ? .asleep : (m.hovering && m.mood == .asleep && !m.snoozed ? .calm : m.mood) }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: m.walking || m.zoomies || m.gesture != .none || m.hovering || m.breathing ? 1.0 / 30 : 1.0)) { t in   // 1 fps when idle: 7.6% → 3% CPU, measured
+        TimelineView(.animation(minimumInterval: m.walking || m.zoomies || m.gesture != .none || m.hovering || m.breathing ? 1 / walkHz : 1.0)) { t in   // 1 fps when idle: 7.6% → 3% CPU, measured
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             let asleep = mood == .asleep
             let breathe = 1 + (asleep ? 0.05 : 0.025) * sin(s * (asleep ? 1.4 : 2.4))

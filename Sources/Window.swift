@@ -305,7 +305,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         Timer.scheduledTimer(withTimeInterval: 600, repeats: true) { [weak self] _ in self?.model.loadStats() }
         Timer.scheduledTimer(withTimeInterval: CommandLine.arguments.contains("--demo") ? 3 : 30, repeats: true) { [weak self] _ in self?.model.ambientTick() }
-        Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.wander() }
+        Timer.scheduledTimer(withTimeInterval: 1 / walkHz, repeats: true) { [weak self] _ in self?.wander() }
         // a new breed every 15 min (quietly: no bubble while something needs you or the card is open)
         Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: true) { [weak self] _ in
             guard let m = self?.model, !m.snoozed else { return }
@@ -390,11 +390,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var tick = 0
     func wander() {
         let m = model
-        // 30 Hz only while walking; 2 Hz otherwise
+        // walkHz while moving; ~2 Hz otherwise
         tick += 1
         if heroFlight() { return }
         let moving = m.walking || m.zoomies || target != nil
-        if !moving && tick % 15 != 0 { return }
+        if !moving && tick % 8 != 0 { return }
         placeLitter()
         if m.squatting { return }
         // never lose Buddy: if the window ended up off every screen, put it back on the floor
@@ -404,7 +404,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         homeY = panel.frame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
-        if idle && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
+        if idle && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
         if m.zoomies {
             var f = panel.frame
             if target == nil || abs((target ?? 0) - f.minX) < 8 {
@@ -413,7 +413,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let dx = target! - f.minX
             if !m.walking { m.walking = true }
             if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
-            f.origin.x += dx > 0 ? min(9, dx) : max(-9, dx)
+            f.origin.x += dx > 0 ? min(9 * stepScale, dx) : max(-9 * stepScale, dx)
             panel.setFrameOrigin(f.origin)
             return
         }
@@ -429,8 +429,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !m.walking { m.walking = true }
         if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
         let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
-        if m.relaxing && Int.random(in: 0..<600) == 0 { m.leaves += 1 }   // ~every 20 s of walking, a leaf drifts past
-        f.origin.x += dx > 0 ? min(pace, dx) : max(-pace, dx)
+        if m.relaxing && Int.random(in: 0..<300) == 0 { m.leaves += 1 }   // ~every 20 s of walking, a leaf drifts past
+        f.origin.x += dx > 0 ? min(pace * stepScale, dx) : max(-pace * stepScale, dx)
         panel.setFrameOrigin(f.origin)
     }
 
