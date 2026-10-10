@@ -9,10 +9,8 @@ jobs:
         with: { fetch-depth: 0 }
       - name: Build
         run: swiftc -swift-version 5 -O -suppress-warnings Sources/*.swift -o Buddy
-      - name: Self-test
-        run: ./Buddy --selftest
-      - name: Hook test
-        run: python3 test_beat.py
+      - name: Pre-PR check (self-test, regressions, hook test, walk check)
+        run: ./check.sh
       - name: Card and pet snapshots, before and after
         run: |
           # build the base first, then render both back to back, so the clock reads the same in both
