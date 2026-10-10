@@ -45,7 +45,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     q.bubble = nil; q.snoozedUntil = Date().addingTimeInterval(60); q.sayNext(); precondition(q.bubble == nil)
     q.snoozedUntil = nil; q.sayNext(); precondition(q.bubble?.text == "selftest b")
     q.bubble = nil; q.sayNext(); precondition(q.bubble == nil)
-    let co = Model()   // several "done" waiting at once: one bubble; the inbox keeps each
+    let co = Model(); co.relaxUntil = nil; co.privacy = false   // several "done" waiting at once: one bubble; the inbox keeps each (your own relax/privacy settings would change that)
     co.say("selftest x", .calm); co.say("a is done", .calm, group: "a"); co.say("b is done", .calm, group: "b"); co.say("c is done", .calm, group: "c")
     co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
     let st = Model()   // a sticky bubble goes when its reason does (here: no session is waiting)
