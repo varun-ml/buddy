@@ -277,6 +277,10 @@ struct BurrowCard: View {
                         Text(s.rankText).font(.system(size: 14, weight: .heavy, design: .rounded)).foregroundColor(bClay)
                         Text("you · \(s.myCount)").font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundColor(bSub).lineLimit(1)
                     }.frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 1) {   // the team's total today, all authors
+                        Text("👥 \(s.teamTotal)").font(.system(size: 14, weight: .heavy, design: .rounded))
+                        Text("team").font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundColor(bSub).lineLimit(1)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 12).padding(.vertical, 7).background(RoundedRectangle(cornerRadius: 16).fill(Color.white)).padding(.top, 8)
                 .help("PRs merged by the team: \(s.teamTotal) in all")
