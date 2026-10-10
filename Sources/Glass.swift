@@ -169,6 +169,7 @@ struct GlassCard: View {
         let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
         let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 10) {
+            NoticeList(m: m)
             ForEach(m.waiting) { w in
                 HStack(spacing: 0) { Button { activate(w) } label: {
                     HStack(spacing: 10) {

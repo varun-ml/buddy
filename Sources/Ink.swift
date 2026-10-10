@@ -168,6 +168,7 @@ struct InkCard: View {
         let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
         let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
         return VStack(alignment: .leading, spacing: 0) {
+            NoticeList(m: m, fg: Color.white.opacity(0.92), dim: Color.white.opacity(0.5))
             ForEach(m.waiting) { w in
                 HStack(spacing: 0) { Button { activate(w) } label: {
                     HStack(spacing: 10) {

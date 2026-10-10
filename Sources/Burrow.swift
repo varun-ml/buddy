@@ -207,6 +207,7 @@ struct BurrowCard: View {
         let s = m.stats, quiet = m.ignoredRed.count
         let g = m.goal("today")
         return VStack(alignment: .leading, spacing: 0) {
+            NoticeList(m: m)
             VStack(spacing: 6) {
                 ForEach(m.waiting) { w in
                     HStack(spacing: 0) { Button { activate(w) } label: {

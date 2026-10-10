@@ -59,6 +59,9 @@ struct Bubble: Identifiable {
     var byline: String? = nil
     var action: (() -> Void)?
     var react: ((Bool) -> Void)? = nil   // 👍/👎 chips: Buddy learns which ideas you like
+    var sticky: String? = nil            // stays up until this resolves: "s:<session id>" stops waiting, "pr:<id>" stops being red
+    var group: String? = nil             // a finished session's repo: several waiting at once show as one "3 done" bubble
+    let at = Date()
 }
 
 struct Stats {
