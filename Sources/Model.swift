@@ -37,6 +37,9 @@ final class Model: ObservableObject {
     @Published var shake = 0
     @Published var celebrate = 0
     @Published var hearts = 0
+    @Published var relaxUntil = UserDefaults.standard.object(forKey: "bit.relax") as? Date   // relax mode (Relax.swift), until midnight
+    @Published var breakUntil: Date?   // a 2-minute breathing break
+    @Published var leaves = 0          // a leaf drifts past (relax mode walk)
     @Published var busyAction: String?
     @Published var hovering = false
     @Published var walking = false
@@ -159,7 +162,8 @@ final class Model: ObservableObject {
     /// A little bit of business: stretch, yawn, chase tail, wash, loaf, sneeze, zoomies, knock something off, hop.
     /// Bears: rear up and roar, eat honey, swipe a fish out of the air, scratch their back.
     func doGesture(_ g: Gesture? = nil) {
-        let pick = g ?? (petKind.tricks + (drip ? [.shimmy, .shimmy] : []) + costumeTricks).randomElement()!
+        let calm: [Gesture] = petKind.biped ? [.stretch] : [.loaf, .yawn, .stretch]   // relax mode: slow, sleepy tricks
+        let pick = g ?? (relaxing ? calm : petKind.tricks + (drip ? [.shimmy, .shimmy] : []) + costumeTricks).randomElement()!
         gesture = pick
         gestureAt = Date()
         if pick == .zoomies { zoomies = true }
@@ -174,7 +178,7 @@ final class Model: ObservableObject {
     private var lastEventAt = Date.distantPast
     private var hoverEndedAt = Date.distantPast
     private var lastRank: Int?
-    private var lastAmbient = ""
+    var lastAmbient = ""
     private var said: [String: Date] = [:]
     private func fresh(_ line: String) -> Bool { Date().timeIntervalSince(said[line] ?? .distantPast) > 3600 }
     private var lastStates: [String: String] = [:]
@@ -413,7 +417,7 @@ final class Model: ObservableObject {
         stats = s
         statsLoaded = true
         // the one place the merge count changes, so the bubble always says what the card shows
-        if !first, s.merged > prevMerged { say(line("merged", "Merged! That's \(s.merged) today 🏆", ["n": "\(s.merged)"]), .happy, seconds: 8) }
+        if !first, !relaxing, s.merged > prevMerged { say(line("merged", "Merged! That's \(s.merged) today 🏆", ["n": "\(s.merged)"]), .happy, seconds: 8) }
         mergedToday = s.merged
         if first && Calendar.current.component(.hour, from: Date()) >= 6 && Day.once("greeted") {
             let y = s.yesterdayMerged.map { "Yesterday you merged \($0)." } ?? ""
@@ -421,7 +425,7 @@ final class Model: ObservableObject {
         }
         // milestones and taking #1: once each per day
         // ponytail: on launch, milestones already passed are marked silently; only new crossings celebrate
-        for m in [5, 10, 15, 20] where s.merged >= m && Day.once("milestone\(m)") && !first && prevMerged < m {
+        for m in [5, 10, 15, 20] where !relaxing && s.merged >= m && Day.once("milestone\(m)") && !first && prevMerged < m {
             say(m >= 15 ? "\(m) merged! Absolute unit. 💪" : "\(m) merged today! 🎉", .happy, seconds: 8, kind: .ambient, pose: .flex)
             hearts += 1
         }
@@ -441,6 +445,7 @@ final class Model: ObservableObject {
         guard now >= nextSlot, bubble == nil || demo, !showCard, !snoozed, !hovering,
               demo || now.timeIntervalSince(lastEventAt) > 180, demo || now.timeIntervalSince(hoverEndedAt) > 120 else { return }
         nextSlot = now.addingTimeInterval(demo ? 12 : 8 * 60)
+        if relaxing { relaxQuote(); return }   // calm lines only, no work chatter
         let hour = Calendar.current.component(.hour, from: now)
         if costume != "off", let hi = festivalGreetings[isoDay.string(from: now)], Day.once("festival") { say(hi, .happy, seconds: 12, kind: .ambient); return }
         if hour >= 19, Day.once("recap") { recap(); return }
@@ -529,10 +534,10 @@ final class Model: ObservableObject {
         life = loadLife()   // edits to the files apply within 30 s, no restart
         let t = loadTasks(); if t != tasks { tasks = t }
         guard !snoozed, bubble == nil, !showCard, !micInUse() else { return }   // mic on = you're in a call
-        if lifeNudge(now) { return }
+        if lifeNudge(now) || relaxNudge(now) { return }
 
         // break nudge: 90 min straight (buddy.json "breakMins"), then every 30 min until you take one
-        if now.timeIntervalSince(workingSince!) >= Double(config["breakMins"] as? Int ?? 90) * 60, now.timeIntervalSince(lastBreakNudge) >= 30 * 60 {
+        if !relaxing, now.timeIntervalSince(workingSince!) >= Double(config["breakMins"] as? Int ?? 90) * 60, now.timeIntervalSince(lastBreakNudge) >= 30 * 60 {
             lastBreakNudge = now
             doGesture(.stretch)
             say(line("break", "\(ago(now.timeIntervalSince(workingSince!))) without a break. 10-minute walk? 🚶", ["t": ago(now.timeIntervalSince(workingSince!))]), .calm, seconds: 20, kind: .ambient)
@@ -722,6 +727,7 @@ final class Model: ObservableObject {
     }
 
     func toggleSnooze() {
+        if breathing { endBreak(quiet: true); return }
         snoozedUntil = snoozed ? nil : Date().addingTimeInterval(3600)
         if snoozed { bubble = nil }
         onExpandChange?()

@@ -148,7 +148,7 @@ struct Cat: View {
     var mood: Mood { m.squatting ? .asleep : (m.hovering && m.mood == .asleep && !m.snoozed ? .calm : m.mood) }
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: m.walking || m.zoomies || m.gesture != .none || m.hovering ? 1.0 / 30 : 1.0)) { t in   // 1 fps when idle: 7.6% → 3% CPU, measured
+        TimelineView(.animation(minimumInterval: m.walking || m.zoomies || m.gesture != .none || m.hovering || m.breathing ? 1.0 / 30 : 1.0)) { t in   // 1 fps when idle: 7.6% → 3% CPU, measured
             let s = (frozenTime ?? t.date.timeIntervalSinceReferenceDate)
             let asleep = mood == .asleep
             let breathe = 1 + (asleep ? 0.05 : 0.025) * sin(s * (asleep ? 1.4 : 2.4))
@@ -163,6 +163,7 @@ struct Cat: View {
             let k = g == .stretch ? sin(min(gt / 2.4, 1) * .pi) : 0
             let loaf = g == .loaf
             ZStack(alignment: .topTrailing) {
+                breathingGuide(s: s).frame(width: 84, height: 72)   // outside the flip, so the words read the right way round
                 ZStack {
                   if petKind.biped {
                     avatarBody(AvatarPose(b: b, s: s, step: m.walking ? sin(s * 12) : 0, asleep: asleep, blink: blink, g: g, gt: gt))
@@ -242,6 +243,7 @@ struct Cat: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) { jump = 0 } }
         }
         .onChange(of: m.hearts) { _ in burst(["💖", "💗", "💖"]) }
+        .onChange(of: m.leaves) { _ in burst([["🍃"], ["🌸"], ["🍃", "🍂"]].randomElement()!, fall: true) }
         .onChange(of: m.gesture) { g in
             if let words = petKind.bursts[g] { burst(words); return }
             switch g {
