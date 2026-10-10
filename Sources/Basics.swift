@@ -202,6 +202,9 @@ let danceFrames: [NSImage] = {
 let sessionsDir = (home as NSString).appendingPathComponent(".claude/pet/sessions")
 let projectsDir = (home as NSString).appendingPathComponent(".claude/projects")
 let ghPath = tool("gh")
+/// Frames a second while Buddy moves. It walks all the time, so this is most of its CPU: 30 → 15 halved it.
+let walkHz: Double = 15
+let stepScale = CGFloat(30 / walkHz)   // per-frame steps were tuned at 30 fps; keep the same speed on screen
 let staleAfter: Double = 15 * 60
 let forgetAfter: Double = 12 * 3600
 var blobCenter: () -> CGPoint = { .zero }
