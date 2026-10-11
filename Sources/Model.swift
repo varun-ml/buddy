@@ -357,7 +357,7 @@ final class Model: ObservableObject {
         if b.kind == .event && (b.tone == .upset || b.tone == .waiting) { shake += 1 }
         if b.tone == .happy { celebrate += 1 }
         onExpandChange?()
-        armTimer(b, seconds: seconds, pose: pose)
+        armTimer(b, seconds: seconds * linger(b.kind), pose: pose)
     }
 
     private func armTimer(_ b: Bubble, seconds: Double, pose: Pose) {
@@ -812,3 +812,7 @@ func stickyLive(_ k: String, waiting: Set<String>, red: Set<String>, done: Set<S
     if k.hasPrefix("say:") { return !done.contains(k) }
     return k.hasPrefix("s:") ? waiting.contains(k) : red.contains(k)
 }
+
+/// How much longer than its own duration a bubble stays: events (done, a message for you) twice as long, chatter half again.
+// ponytail: one fixed factor per kind; a setting if anyone wants it shorter
+func linger(_ k: BubbleKind) -> Double { k == .event ? 2 : 1.5 }
