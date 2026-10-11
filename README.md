@@ -170,6 +170,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `claudeLimits` | Show your Claude plan usage (default off; see *What it asks permission for*) |
 | `switchesPerHour` | App switches in an hour before Buddy suggests calming down (default 120; needs switch tracking on) |
 | `sessionsPer2h` | Agent sessions touched in 2 hours before Buddy suggests finishing some (default 6; needs switch tracking on) |
+| `minPRLines` | Merged PRs smaller than this many changed lines (submodule bumps, version pins) and bots' PRs don't count on your tile or the leaderboard (default 3) |
 | `statsRepos` | GitHub repos for your merged/opened PR counts and a team leaderboard (needs `gh`) |
 
 ## Requirements

@@ -408,15 +408,19 @@ final class Model: ObservableObject {
             // the team: every merged PR today, 100 per page (a busy day is 150+; one page dropped the rest)
             var by: [String: Int] = [:], after = "", total = 0
             for _ in 0..<(statsRepos.isEmpty ? 0 : 10) {
-                let tq = "query{ search(query:\"is:pr is:merged merged:>=\(from) \(repos)\",type:ISSUE,first:100\(after)){issueCount pageInfo{hasNextPage endCursor} nodes{... on PullRequest{author{login}}}} }"
+                let tq = "query{ search(query:\"is:pr is:merged merged:>=\(from) \(repos)\",type:ISSUE,first:100\(after)){issueCount pageInfo{hasNextPage endCursor} nodes{... on PullRequest{author{login __typename} additions deletions}}} }"
                 guard let d = gh(["api", "graphql", "-f", "query=\(tq)"]),
                       let r = ((try? JSONSerialization.jsonObject(with: d) as? [String: Any])?["data"] as? [String: Any])?["search"] as? [String: Any] else { break }
-                total = r["issueCount"] as? Int ?? total
-                for n in (r["nodes"] as? [[String: Any]]) ?? [] { if let l = (n["author"] as? [String: Any])?["login"] as? String { by[l, default: 0] += 1 } }
+                for n in (r["nodes"] as? [[String: Any]]) ?? [] {
+                    let a = n["author"] as? [String: Any], lines = (n["additions"] as? Int ?? 0) + (n["deletions"] as? Int ?? 0)
+                    guard let l = a?["login"] as? String, countsPR(lines: lines, bot: a?["__typename"] as? String == "Bot") else { continue }
+                    by[l, default: 0] += 1; total += 1
+                }
                 guard let pi = r["pageInfo"] as? [String: Any], pi["hasNextPage"] as? Bool == true, let c = pi["endCursor"] as? String else { okTeam = true; break }
                 after = ",after:\"\(c)\""
             }
             s.teamTotal = total
+            if okTeam && !s.me.isEmpty { s.merged = by[s.me] ?? 0 }   // your tile counts by the same rule as the leaderboard
             s.team = by.map { ($0.key, $0.value) }.sorted { $0.n > $1.n || ($0.n == $1.n && $0.login < $1.login) }
             if !s.me.isEmpty, let d = gh(["api", "search/commits?q=author:\(s.me)+committer-date:>=\(today)&per_page=1", "--jq", ".total_count"]) {
                 s.commits = Int(String(data: d, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "") ?? 0
@@ -816,3 +820,7 @@ func stickyLive(_ k: String, waiting: Set<String>, red: Set<String>, done: Set<S
 /// How much longer than its own duration a bubble stays: events (done, a message for you) twice as long, chatter half again.
 // ponytail: one fixed factor per kind; a setting if anyone wants it shorter
 func linger(_ k: BubbleKind) -> Double { k == .event ? 2 : 1.5 }
+
+/// Does a merged PR count on the leaderboard? Not a bot's, and not a tiny one (a submodule bump or version pin changes 2 lines):
+/// buddy.json "minPRLines" (default 3) changed lines at least.
+func countsPR(lines: Int, bot: Bool) -> Bool { !bot && lines >= (config["minPRLines"] as? Int ?? 3) }

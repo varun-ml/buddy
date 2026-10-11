@@ -71,6 +71,8 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     // `buddy say --sticky KEY` stays until `buddy done KEY`
     precondition(stickyLive("say:lesson-12", waiting: [], red: [], done: []) && !stickyLive("say:lesson-12", waiting: [], red: [], done: ["say:lesson-12"]))
     precondition(stickyLive("s:a", waiting: ["s:a"], red: [], done: []) && !stickyLive("pr:9", waiting: [], red: [], done: ["say:pr:9"]))
+    // automated one-line PRs (gitlink bumps) and bots don't count on the leaderboard
+    precondition(!countsPR(lines: 2, bot: false) && countsPR(lines: 3, bot: false) && !countsPR(lines: 500, bot: true))
     print("selftest ok"); exit(0)
 }
 var walkFailed = false
