@@ -130,6 +130,8 @@ Any agent can run:
 ```bash
 buddy say "Tests are green, PR is ready to merge"
 buddy say "I need your decision on the pricing copy" --urgent
+buddy say "Lesson 12 is ready. Answer the 3 questions in chat." --sticky lesson-12   # stays up until…
+buddy done lesson-12                                                                # …this, or you tap it
 ```
 
 To make your agents actually do it, paste this into `~/.claude/CLAUDE.md` (Claude Code) and `~/.codex/AGENTS.md` (Codex):

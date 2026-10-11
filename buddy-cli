@@ -2,8 +2,11 @@
 """buddy: start Buddy, or let any agent tell you something through it.
 
   buddy                         start Buddy again (after right-click → Close Buddy)
-  buddy say "text" [--urgent]   show a bubble; tapping it opens the session in this folder
+  buddy say "text" [--urgent] [--sticky KEY]
+                                show a bubble; tapping it opens the session in this folder
                                 --urgent: waiting-for-you sound, and it jumps the queue
+                                --sticky KEY: the bubble stays until you tap it or something runs `buddy done KEY`
+  buddy done KEY                clear the sticky bubble KEY (e.g. once the user has answered)
 """
 import json, os, subprocess, sys, time
 
@@ -11,9 +14,21 @@ args = sys.argv[1:]
 if not args:
     subprocess.run(['launchctl', 'kickstart', f'gui/{os.getuid()}/com.buddy-pet.buddy'])
     sys.exit()
+done_dir = os.path.expanduser('~/.claude/pet/done')
+if args[0] == 'done' and len(args) == 2:
+    os.makedirs(done_dir, exist_ok=True)
+    open(os.path.join(done_dir, os.path.basename(args[1])), 'w').close()   # Buddy clears that bubble within 2 s
+    print('Cleared.'); sys.exit()
 if args[0] != 'say' or len(args) < 2:
     print(__doc__); sys.exit(2)
 urgent = '--urgent' in args
+sticky = None
+if '--sticky' in args:
+    i = args.index('--sticky')
+    if i + 1 >= len(args): print(__doc__); sys.exit(2)
+    sticky = os.path.basename(args[i + 1]); del args[i:i + 2]
+    try: os.remove(os.path.join(done_dir, sticky))   # a fresh bubble with an old key starts uncleared
+    except FileNotFoundError: pass
 text = ' '.join(a for a in args[1:] if a != '--urgent').strip()[:300]
 if not text:
     print(__doc__); sys.exit(2)
@@ -21,6 +36,6 @@ inbox = os.path.expanduser('~/.claude/pet/inbox')
 os.makedirs(inbox, exist_ok=True)
 path = os.path.join(inbox, f'{time.time():.3f}-{os.getpid()}.json')
 with open(path + '.tmp', 'w') as f:
-    json.dump({'text': text, 'urgent': urgent, 'cwd': os.getcwd(), 'ts': time.time()}, f)
+    json.dump({'text': text, 'urgent': urgent, 'sticky': sticky, 'cwd': os.getcwd(), 'ts': time.time()}, f)
 os.replace(path + '.tmp', path)   # Buddy reads it within 2 s; it keeps for 2 h if Buddy is closed
 print('Buddy will show it.')

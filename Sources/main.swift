@@ -68,6 +68,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     // One failed GitHub call blanked the tiles and the leaderboard.
     var g2 = Stats(); g2.team = [("ana", 2)]; g2.teamTotal = 2; mc.applyStats(g2); mc.applyStats(keepGood(Stats(), old: mc.stats, okMe: true, okTeam: false))
     precondition(mc.stats.teamTotal == 2 && !mc.stats.team.isEmpty)
+    // `buddy say --sticky KEY` stays until `buddy done KEY`
+    precondition(stickyLive("say:lesson-12", waiting: [], red: [], done: []) && !stickyLive("say:lesson-12", waiting: [], red: [], done: ["say:lesson-12"]))
+    precondition(stickyLive("s:a", waiting: ["s:a"], red: [], done: []) && !stickyLive("pr:9", waiting: [], red: [], done: ["say:pr:9"]))
     print("selftest ok"); exit(0)
 }
 var walkFailed = false
