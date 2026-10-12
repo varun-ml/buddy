@@ -170,6 +170,7 @@ class BuddyService : Service() {
         if (kind == "resolve") {
             open.remove(sticky)
             nm.cancel(sticky.hashCode())
+            overlay?.resolved(sticky)
             queue.removeAll { it.optString("sticky") == sticky }
             refresh()
             return
@@ -179,7 +180,7 @@ class BuddyService : Service() {
         refresh()
         overlay?.react(kind)
         val fresh = System.currentTimeMillis() / 1000.0 - e.optDouble("at") < MAX_AGE_S
-        if (speak && fresh && kind in SPOKEN) enqueue(e)
+        if (speak && fresh && kind in SPOKEN) { enqueue(e); overlay?.say(e) }
         if (kind == "needs-you" && sticky.isNotEmpty() && !e.optBoolean("repeat"))
             main.postDelayed({ if (sticky in open) enqueue(JSONObject(e.toString()).put("repeat", true)) }, REPEAT_MS)
     }
