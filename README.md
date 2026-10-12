@@ -143,6 +143,23 @@ run `buddy say "<one short sentence>"` (add --urgent if I must act now).
 Under 20 words. No secrets. Not for routine progress.
 ```
 
+## Buddy on your phone (Android, beta)
+
+Away from the desk, Buddy follows you to your phone. A small Android app shows the same buddy as a floating bubble over your other apps. For each event it plays a sound you learn to tell apart (needs you, done, failed, a message), then reads one short line aloud: "pricing-page is done. Fixed the login test, and all tests pass." Tap the bubble for the same status card, sessions and inbox only. Long-press it to mute for an hour.
+
+- **Nothing leaves your network.** The Mac talks to the phone over [Tailscale](https://tailscale.com) only, with a token. No cloud relay and no push service.
+- **The line it reads is written by the hook, not by Buddy.** When a session ends a turn and the phone is connected, `beat.py` asks a small model (Claude Haiku, through your own `claude` CLI) to turn the reply into one sentence without code or paths. With no phone connected, nothing runs and nothing is spent.
+- **It works with the screen off and Maps open.** Maps gets quieter while Buddy talks.
+
+To set it up:
+
+1. Install Tailscale on the Mac and the phone, and sign in to the same account on both.
+2. Add `"phone": true` to `~/.config/buddy.json`, then run `./install.sh` again.
+3. Build the app once: `cd android && ./gradlew assembleDebug`. It needs JDK 17 and the Android SDK.
+4. Run `buddy pair`. Scan the first QR code with the phone camera to download the app, and allow the install. Then scan the second code, which opens the app and pairs it with this Mac.
+
+Talking back to your sessions comes later. For now, answer them in Claude's own app (Remote Control).
+
 ## Settings
 
 All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `buddy`).

@@ -248,6 +248,9 @@ class Handler(BaseHTTPRequestHandler):
         if u.path.startswith('/avatar/'):
             p = os.path.join(PHONE, 'avatar', os.path.basename(u.path))
             return self.send(200, open(p, 'rb').read(), 'image/png') if os.path.exists(p) else self.send(404, {'error': 'no avatar'})
+        if u.path == '/buddy.apk':   # the app itself, built from android/ (see README); `buddy pair` shows a QR code for it
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'android/app/build/outputs/apk/debug/app-debug.apk')
+            return self.send(200, open(p, 'rb').read(), 'application/vnd.android.package-archive') if os.path.exists(p) else self.send(404, {'error': 'build it: cd android && ./gradlew assembleDebug'})
         if u.path == '/events':
             return self.stream(after)
         self.send(404, {'error': 'not found'})
@@ -261,16 +264,19 @@ class Handler(BaseHTTPRequestHandler):
         open(os.path.join(PHONE, 'listening'), 'w').close()
         try:
             self.wfile.write(b'retry: 2000\n\n')
+            sent_live = False
             while True:
                 with hub.cv:
                     new = [e for e in hub.events if e['id'] > after]
-                    if not new:
+                    if not new and sent_live:
                         hub.cv.wait(20)
                         new = [e for e in hub.events if e['id'] > after]
                 for e in new:
                     self.wfile.write(f'id: {e["id"]}\ndata: {json.dumps(e)}\n\n'.encode())
                     after = e['id']
-                if not new:
+                if not sent_live:   # everything before this was catch-up: the app reads it quietly, except the newest few
+                    self.wfile.write(b': live\n\n'); sent_live = True
+                elif not new:
                     self.wfile.write(b': ping\n\n')   # keeps mobile networks from dropping a quiet connection
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, TimeoutError):
@@ -286,10 +292,17 @@ def main():
         sys.exit('Tailscale is not running on this Mac. Open Tailscale, sign in, and run this again.')
     url = f'http://{host}:{PORT}'
     if sys.argv[1:2] == ['--pair']:
-        pair = json.dumps({'url': url, 'token': token()})
-        subprocess.run(['qrencode', '-t', 'ansiutf8', pair]) if subprocess.run(['which', 'qrencode'], capture_output=True).returncode == 0 \
-            else print('(brew install qrencode to show a QR code)')
-        print(f'Scan this in the Buddy app, or type in: {url}  and the token in {TOKEN}')
+        from urllib.parse import urlencode
+        pair = 'buddy://pair?' + urlencode({'url': url, 'token': token()})   # the Pixel camera opens this link in the app
+        def qr(text):
+            if subprocess.run(['which', 'qrencode'], capture_output=True).returncode == 0:
+                subprocess.run(['qrencode', '-t', 'ansiutf8', text])
+            else:
+                print(text, '  (brew install qrencode to see it as a QR code)')
+        print('1. No app yet? Scan this with the Pixel camera to download it (then allow the install):', flush=True)
+        qr(f'{url}/buddy.apk?token={token()}')
+        print('2. Then scan this one: it opens the app and pairs it with this Mac.', flush=True)
+        qr(pair)
         return
     token()
     hub = Hub()
