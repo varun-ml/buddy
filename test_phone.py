@@ -79,4 +79,9 @@ try:
     assert get(f'/inbox?after={inbox[-2]["id"]}')[1] == inbox[-1:]
 finally:
     srv.kill()
+# a failing CLI (expired login) prints its error on stdout: that must never become the spoken line
+bad = os.path.join(T, 'bad'); open(bad, 'w').write('#!/bin/sh\ncat > /dev/null\necho "Failed to authenticate: OAuth session expired"\nexit 1\n'); os.chmod(bad, 0o755)
+sf = os.path.join(T, 'speak-check.json'); json.dump({'state': 'done'}, open(sf, 'w'))
+subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', sf], input='reply', text=True, env={**env, 'BUDDY_SPEAK_CMD': bad}, check=True)
+assert 'spoken' not in json.load(open(sf)), json.load(open(sf))
 print('phone test ok')

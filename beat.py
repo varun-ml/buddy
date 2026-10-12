@@ -88,10 +88,13 @@ def speak(path):
     # no MCP servers, plugins or hooks: about 4-6 s instead of 9. The prompt goes on stdin: an argument can be read as a flag's value
     cmd = cmd.split() if cmd else ['claude', '-p', '--model', 'haiku', '--strict-mcp-config', '--setting-sources', 'project']
     try:
-        out = subprocess.run(cmd, input=SPEAK.format(reply), capture_output=True, text=True, timeout=40,
-                             cwd=os.path.expanduser('~/.config/buddy')).stdout.strip()   # that folder: beat.py ignores this call's own hooks
+        r = subprocess.run(cmd, input=SPEAK.format(reply), capture_output=True, text=True, timeout=40,
+                           cwd=os.path.expanduser('~/.config/buddy'))   # that folder: beat.py ignores this call's own hooks
     except Exception:
         return
+    if r.returncode:   # e.g. "Failed to authenticate…" on stdout: never read a CLI error aloud
+        return
+    out = r.stdout.strip()
     line, details = parse_spoken(out)
     if not line:
         return
