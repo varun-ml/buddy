@@ -166,7 +166,7 @@ struct InkCard: View {
     // ---- Work
     var work: some View {
         let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
-        let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
+        let pots = m.pots, shown = pots.filter { !$0.done }
         return VStack(alignment: .leading, spacing: 0) {
             NoticeList(m: m, fg: Color.white.opacity(0.92), dim: Color.white.opacity(0.5))
             ForEach(m.waiting) { w in
@@ -205,7 +205,7 @@ struct InkCard: View {
                 }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }.padding(.horizontal, -6)
             }
             if pots.isEmpty && m.waiting.isEmpty { Text("Nothing running.").font(.system(size: 13)).foregroundColor(kSub).padding(.vertical, 4) }
-            if pots.count > listCap { Button(ui.allPots ? "show less" : "+ \(pots.count - listCap) more") { withAnimation { ui.allPots.toggle() } }.buttonStyle(.plain).font(.system(size: 12, weight: .medium)).foregroundColor(kMid).padding(.top, 4) }
+            ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, fg: Color.white.opacity(0.75), sub: kSub).padding(.horizontal, -6) }
 
             HStack(spacing: 0) {
                 if !statsRepos.isEmpty {

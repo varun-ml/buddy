@@ -31,6 +31,21 @@ var T = themes[UserDefaults.standard.string(forKey: "bit.theme") ?? (config["the
 
 let listCap = 3   // rows per list before "+ N more", so the card never scrolls
 
+/// A finished session in one short line, under the running ones: every session is listed, the busy ones first and in full.
+struct DoneRow: View {
+    let m: Model; let p: Pot; var fg: Color = .primary; var sub: Color = .secondary
+    var body: some View {
+        Button { activate(p.s) } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundColor(sub)
+                Text(p.s.repo ?? "?").font(.system(size: 12, weight: .medium)).foregroundColor(fg).lineLimit(1)
+                Spacer(minLength: 4)
+                Text("done \(p.age)").font(.system(size: 11)).monospacedDigit().foregroundColor(sub)
+            }.padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
+        }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
+    }
+}
+
 /// A session row: running, or finished in the last hour (your turn).
 struct Pot: Identifiable {
     let s: Session, done: Bool
@@ -191,7 +206,6 @@ final class CardUI: ObservableObject {
     @Published var hover: String?
     @Published var ticking: Set<String> = []
     @Published var showAll = false
-    @Published var allPots = false
     func tick(_ t: Todo, _ m: Model) {
         withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) { _ = ticking.insert(t.id) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { self.ticking.remove(t.id); m.tick(t) }

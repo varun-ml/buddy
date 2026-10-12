@@ -167,7 +167,7 @@ struct GlassCard: View {
     // ---- Work
     var work: some View {
         let s = m.stats, quiet = m.ignoredRed.count, g = m.goal("today")
-        let pots = m.pots, shown = ui.allPots ? pots : Array(pots.prefix(listCap))
+        let pots = m.pots, shown = pots.filter { !$0.done }
         return VStack(alignment: .leading, spacing: 10) {
             NoticeList(m: m)
             ForEach(m.waiting) { w in
@@ -217,7 +217,7 @@ struct GlassCard: View {
                             }.padding(.horizontal, 6).padding(.vertical, 7).contentShape(Rectangle())
                         }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
                     }
-                    if pots.count > listCap { Button(ui.allPots ? "Show less" : "Show \(pots.count - listCap) more") { withAnimation { ui.allPots.toggle() } }.buttonStyle(.plain).font(.system(size: 12, weight: .semibold)).foregroundColor(gBlue).frame(maxWidth: .infinity, alignment: .leading).padding(6) }
+                    ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, sub: gSub) }
                 }.padding(.vertical, 6).padding(.horizontal, 8).background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55)))
             }
             if !s.team.isEmpty {
