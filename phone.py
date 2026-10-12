@@ -11,7 +11,7 @@ It reads the same session files Buddy does (~/.claude/pet/sessions, written by b
 Today's events are kept in ~/.claude/pet/phone/events-<day>.jsonl, so a phone that was offline catches up.
 Endpoints (all need the token): GET /events?after=ID (server-sent events), /inbox?after=ID, /card, /avatar/<name>.png
 """
-import hmac, json, os, plistlib, secrets, subprocess, sys, threading, time
+import hmac, json, os, plistlib, re, secrets, subprocess, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -50,6 +50,17 @@ def ignored():
         return set(d.get('bit.ignored', {}))
     except Exception:
         return set()
+
+
+def speakable(text):
+    """What's safe to read aloud: no URLs, paths, hashes or long numbers (a voice reading 'e3215623f' is noise)."""
+    words = []
+    for w in (text or '').split():
+        bare = w.strip('.,;:()[]`"\'')
+        if '://' in bare or '/' in bare or re.fullmatch(r'#?[0-9a-f]{7,}', bare) or re.fullmatch(r'[#\d,._:-]{5,}', bare):
+            continue
+        words.append(w)
+    return re.sub(r'\s+([.,;:])', r'\1', ' '.join(words)).strip()
 
 
 def doing(activity):
@@ -132,9 +143,8 @@ class Hub:
             if first:
                 continue   # starting up: today's log already has what happened before
             if st == 'waiting' and was != 'waiting':
-                what = doing(s.get('activity'))
                 self.emit('needs-you', f'{repo} wants your OK\n{s.get("activity") or ""}'.strip(),
-                          f'{repo} needs your OK' + (f' to {what}.' if what.startswith('run ') else '.'), s, sticky='s:' + sid)
+                          f'{repo} needs your OK.', s, sticky='s:' + sid)   # the command shows on screen; read aloud it's noise
             if was == 'waiting' and st != 'waiting':
                 self.emit('resolve', '', '', s, sticky='s:' + sid)
             if st == 'finished' and was != 'finished':
@@ -156,8 +166,8 @@ class Hub:
             if line or now - at > SPEAK_WAIT:
                 del self.pending[sid]
                 repo = s.get('repo') or 'A session'
-                said = line or s.get('said') or s.get('prompt') or ''
-                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {said}'.strip(), s, details=s.get('details', []) if fresh else [])
+                # only the model's line is read aloud; the raw first line of a reply is for the screen
+                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {speakable(line)}'.strip(), s, details=s.get('details', []) if fresh else [])
         self.read_says(sessions)
 
     def read_says(self, sessions):
@@ -177,7 +187,7 @@ class Hub:
                 s = next((x for x in sessions if x.get('cwd') and (cwd + '/').startswith(os.path.realpath(x['cwd']) + '/')), None)
                 who = (s or {}).get('repo') or os.path.basename(cwd.rstrip('/')) or 'Buddy'
                 key = j.get('sticky')
-                self.emit('needs-you' if j.get('urgent') else 'say', f'{who}: {j["text"]}', f'{who}: {j["text"]}', s,
+                self.emit('needs-you' if j.get('urgent') else 'say', f'{who}: {j["text"]}', f'{who}: {speakable(j["text"])}', s,
                           **({'sticky': 'say:' + key} if key else {}))
                 if key:
                     self.open_says.add(key)

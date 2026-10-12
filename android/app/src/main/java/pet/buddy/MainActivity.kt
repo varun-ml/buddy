@@ -89,6 +89,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        svc?.showBubble(prefs.bubble)   // the overlay permission may have just been granted
         svc?.onChange = { main.post { render() } }
         main.post(tick)
     }

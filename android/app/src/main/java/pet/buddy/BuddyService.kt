@@ -147,6 +147,7 @@ class BuddyService : Service() {
         var wait = 1000L
         while (running) {
             if (prefs.paired) try {
+                val firstSync = prefs.lastId == 0L
                 val c = prefs.open("/events?after=${prefs.lastId}", readTimeoutMs = 60_000).also { conn = it }
                 val backlog = mutableListOf<JSONObject>()
                 var live = false
@@ -159,7 +160,10 @@ class BuddyService : Service() {
                         val line = r.readLine() ?: break
                         when {
                             line.startsWith("data: ") -> data = line.substring(6)
-                            line == ": live" -> { live = true; val b = backlog.toList(); backlog.clear(); main.post { catchUp(b) } }
+                            line == ": live" -> {   // first connect after pairing: the past day goes to the inbox, nothing is read out
+                                live = true; val b = backlog.toList(); backlog.clear(); val fresh = firstSync
+                                main.post { if (fresh) b.forEach { handle(it, speak = false, quiet = true) } else catchUp(b) }
+                            }
                             line.isEmpty() && data.isNotEmpty() -> {
                                 val e = JSONObject(data); data = ""
                                 prefs.lastId = e.getLong("id")
@@ -197,7 +201,7 @@ class BuddyService : Service() {
 
     // ---- one event
 
-    private fun handle(e: JSONObject, speak: Boolean) {
+    private fun handle(e: JSONObject, speak: Boolean, quiet: Boolean = false) {   // quiet: no notification either
         val kind = e.optString("kind")
         val sticky = e.optString("sticky")
         if (kind == "resolve") {
@@ -209,7 +213,7 @@ class BuddyService : Service() {
             return
         }
         if (sticky.isNotEmpty()) open += sticky
-        notify(e)
+        if (!quiet) notify(e)
         refresh()
         overlay?.react(kind)
         val fresh = System.currentTimeMillis() / 1000.0 - e.optDouble("at") < MAX_AGE_S

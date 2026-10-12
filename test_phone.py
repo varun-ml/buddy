@@ -46,6 +46,8 @@ def wait_for(kind, n=1, secs=20):
     raise AssertionError(f'no {kind} event; got {got}')
 
 try:
+    sys.path.insert(0, HERE); from phone import speakable
+    assert speakable('Option A is pushed: PR #625 (e3215623f), see https://x.y/z and src/app.py at 19:53:01.') == 'Option A is pushed: PR #625 see and at'
     assert get('/card', auth=False)[0] == 401
     threading.Thread(target=listen, daemon=True).start()
     time.sleep(1.5)
