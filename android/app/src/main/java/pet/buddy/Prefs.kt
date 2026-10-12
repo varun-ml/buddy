@@ -16,6 +16,7 @@ class Prefs(c: Context) {
     var bubble: Boolean get() = p.getBoolean("bubble", true); set(v) = p.edit().putBoolean("bubble", v).apply()
     var quietFrom: Int get() = p.getInt("quietFrom", 22); set(v) = p.edit().putInt("quietFrom", v).apply()
     var quietTo: Int get() = p.getInt("quietTo", 7); set(v) = p.edit().putInt("quietTo", v).apply()
+    var voice: String get() = p.getString("voice", "")!!; set(v) = p.edit().putString("voice", v).apply()
     var rate: Float get() = p.getFloat("rate", 1.0f); set(v) = p.edit().putFloat("rate", v).apply()
     var bx: Int get() = p.getInt("bx", 0); set(v) = p.edit().putInt("bx", v).apply()
     var by: Int get() = p.getInt("by", 400); set(v) = p.edit().putInt("by", v).apply()

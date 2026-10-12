@@ -101,6 +101,10 @@ class MainActivity : Activity() {
         btn(if (prefs.muted) "Unmute" else "Mute 1 h") { svc?.toggleMute() ?: run { prefs.mutedUntil = if (prefs.muted) 0 else System.currentTimeMillis() + 3600_000 } }
         btn(if (prefs.bubble) "Hide bubble" else "Show bubble") { svc?.showBubble(!prefs.bubble) ?: run { prefs.bubble = !prefs.bubble } }
         list.addView(row)
+        if (svc != null) list.addView(Button(this).apply {
+            text = "Voice: ${prefs.voice.ifEmpty { "default" }}"; isAllCaps = false
+            setOnClickListener { pickVoice(svc) }
+        })
         if (!getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)) {
             list.addView(Button(this).apply {
                 text = "Let Buddy stay connected in the background"; isAllCaps = false
@@ -119,6 +123,16 @@ class MainActivity : Activity() {
             text("Inbox · ${events.size} today", 15f, bold = true, top = 20)
             for (e in events.take(60)) text("${hm(e.optDouble("at"))}  ${e.optString("text").substringBefore("\n")}", 14f)
         }
+    }
+
+    /** Every English voice on the phone, best first; tapping one plays a sample and keeps it. */
+    private fun pickVoice(svc: BuddyService) {
+        val vs = svc.voices()
+        if (vs.isEmpty()) { Toast.makeText(this, "No voices yet: Settings → System → Languages → Text-to-speech → Speech Services by Google", Toast.LENGTH_LONG).show(); return }
+        val names = vs.map { v -> "${v.locale.displayCountry} · ${v.name.substringAfter("-x-").substringBefore("-")}" + (if (v.isNetworkConnectionRequired) " · natural (online)" else " · offline") }
+        android.app.AlertDialog.Builder(this).setTitle("Buddy's voice")
+            .setSingleChoiceItems(names.toTypedArray(), vs.indexOfFirst { it.name == prefs.voice }) { _, i -> svc.preview(vs[i].name) }
+            .setPositiveButton("Done") { _, _ -> render() }.show()
     }
 
     private fun section(title: String, a: JSONArray?, line: (JSONObject) -> String) {

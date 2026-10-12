@@ -17,6 +17,8 @@ import android.os.Looper
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
+import java.util.Locale
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -68,15 +70,17 @@ class BuddyService : Service() {
         }
         startForeground(1, Notification.Builder(this, "running").setSmallIcon(R.drawable.icon).setContentTitle("Buddy is listening")
             .setContentIntent(openApp()).build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        tts = TextToSpeech(this) { ok ->
+        // Google's engine (what Pixel ships), not whatever the default is; then its most natural English voice
+        tts = TextToSpeech(this, { ok ->
             ttsReady = ok == TextToSpeech.SUCCESS
             tts?.setAudioAttributes(speech)
+            useVoice(prefs.voice)
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(id: String?) {}
                 override fun onDone(id: String?) { main.post { finished() } }
                 @Deprecated("old API") override fun onError(id: String?) { main.post { finished() } }
             })
-        }
+        }, "com.google.android.tts")
         showBubble(prefs.bubble)
         thread(name = "stream") { stream() }
     }
@@ -90,6 +94,26 @@ class BuddyService : Service() {
         overlay?.hide()
         instance = null
         super.onDestroy()
+    }
+
+    /** English voices that are installed or stream from Google, most natural first (your country's accent first among equals). */
+    fun voices(): List<Voice> = (tts?.voices ?: emptySet()).filter {
+        it.locale.language == "en" && TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features
+    }.sortedWith(compareByDescending<Voice> { it.quality }
+        .thenByDescending { it.locale.country == Locale.getDefault().country }
+        .thenByDescending { it.isNetworkConnectionRequired }   // Google's network voices sound the most human; offline is the fallback
+        .thenBy { it.name })
+
+    fun useVoice(name: String) {
+        val v = voices().firstOrNull { it.name == name } ?: voices().firstOrNull() ?: return
+        tts?.voice = v
+        prefs.voice = v.name
+    }
+
+    fun preview(name: String) {
+        useVoice(name)
+        tts?.setSpeechRate(prefs.rate)
+        tts?.speak("Hi, I'm Buddy. pricing-page is done: the login test is fixed and all tests pass.", TextToSpeech.QUEUE_FLUSH, null, "preview")
     }
 
     fun showBubble(on: Boolean) {
