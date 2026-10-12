@@ -77,6 +77,9 @@ class Overlay(private val s: BuddyService) {
     }
 
     fun show() = wm.addView(root, lp)
+
+    /** Out of the way while Buddy's own screen is open: it would only cover the card. */
+    fun away(yes: Boolean) { root.visibility = if (yes) View.GONE else View.VISIBLE; if (yes) { hideNote(); hideMenu() } }
     fun hide() { hideNote(); hideMenu(); try { wm.removeView(root) } catch (_: Exception) {} }
 
     private fun openCard() = s.startActivity(Intent(s, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -105,6 +108,7 @@ class Overlay(private val s: BuddyService) {
     }
 
     fun say(e: JSONObject) {
+        if (root.visibility != View.VISIBLE) return   // the app is open: the event is on the card already
         // a "done" never pushes a visible needs-you away; it's in the inbox and was spoken
         if (noteEvent?.str("kind") == "needs-you" && e.str("kind") != "needs-you") return
         showNote(e, expanded = false)
@@ -116,7 +120,9 @@ class Overlay(private val s: BuddyService) {
         val label = when (kind) { "needs-you" -> "needs your OK"; "done" -> "done"; "failed" -> "stuck?"; else -> "says" }
         val color = C.kind(kind)
         val repo = e.str("repo").ifEmpty { "Buddy" }
-        val line = e.str("spoken").removePrefix("$repo is done.").removePrefix("$repo:").trim()
+        // needs-you: what it wants to run (the header already says it needs you); otherwise the line that was read aloud
+        val line = if (kind == "needs-you" && e.str("text").contains("\n")) e.str("text").substringAfter("\n").substringAfter("wants to run: ")
+            else e.str("spoken").removePrefix("$repo is done.").removePrefix("$repo:").trim()
         val details = e.optJSONArray("details")
         val maxW = minOf(s.dp(280), s.resources.displayMetrics.widthPixels - s.dp(100))
         val v = LinearLayout(s).apply {
@@ -179,7 +185,7 @@ class Overlay(private val s: BuddyService) {
         }
         try { wm.addView(v, beside(v, s.dp(200))) } catch (_: Exception) { return }
         menuView = v
-        root.postDelayed({ hideMenu() }, 5000)
+        root.postDelayed({ hideMenu() }, 8000)
     }
 
     /** The buddy in its current mood (drawn by the Mac), the badge (waiting + stuck), and grey while the Mac is out of reach. */

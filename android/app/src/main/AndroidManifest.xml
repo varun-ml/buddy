@@ -7,6 +7,12 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Android 11+: an app can only see (and open) the apps it names here -->
+    <queries>
+        <package android:name="com.anthropic.claude" />
+    </queries>
 
     <!-- cleartext is to the Mac's Tailscale address only; Tailscale encrypts it (WireGuard) -->
     <application android:label="Buddy" android:icon="@drawable/icon" android:usesCleartextTraffic="true"
@@ -24,6 +30,12 @@
                 <data android:scheme="buddy" android:host="pair" />
             </intent-filter>
         </activity>
+        <receiver android:name=".Restart" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
         <service android:name=".BuddyService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Keeps one connection to the user's own Mac to read coding-agent events aloud" />

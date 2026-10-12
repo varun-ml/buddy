@@ -96,13 +96,17 @@ class BuddyService : Service() {
         super.onDestroy()
     }
 
-    /** English voices that are installed or stream from Google, most natural first (your country's accent first among equals). */
-    fun voices(): List<Voice> = (tts?.voices ?: emptySet()).filter {
-        it.locale.language == "en" && TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features
-    }.sortedWith(compareByDescending<Voice> { it.quality }
-        .thenByDescending { it.locale.country == Locale.getDefault().country }
-        .thenByDescending { it.isNetworkConnectionRequired }   // Google's network voices sound the most human; offline is the fallback
-        .thenBy { it.name })
+    /** English voices, one per speaker (the natural, online version when Google has one), your region first, then US, UK, India, Australia. */
+    fun voices(): List<Voice> {
+        val all = (tts?.voices ?: emptySet()).filter {
+            it.locale.language == "en" && TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED !in it.features && Voices.speaker(it) != null
+        }
+        val region = listOf(Locale.getDefault().country, "US", "GB", "IN", "AU")
+        return all.groupBy { Voices.speaker(it) }.values
+            .map { same -> same.maxWith(compareBy<Voice> { it.isNetworkConnectionRequired }.thenBy { it.quality }) }
+            .sortedWith(compareBy<Voice> { region.indexOf(it.locale.country).let { i -> if (i < 0) 99 else i } }
+                .thenByDescending { it.quality }.thenBy { Voices.label(it) })
+    }
 
     fun useVoice(name: String) {
         val v = voices().firstOrNull { it.name == name } ?: voices().firstOrNull() ?: return
@@ -130,6 +134,8 @@ class BuddyService : Service() {
         if (on && overlay == null && Settings.canDrawOverlays(this)) overlay = Overlay(this).also { it.show(); it.update(card, online) }
         if (!on) { overlay?.hide(); overlay = null }
     }
+
+    fun appOpen(open: Boolean) = overlay?.away(open)
 
     fun toggleMute() {
         prefs.mutedUntil = if (prefs.muted) 0 else System.currentTimeMillis() + 3600_000

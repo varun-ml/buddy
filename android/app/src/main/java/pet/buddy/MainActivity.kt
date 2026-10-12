@@ -90,6 +90,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         svc?.showBubble(prefs.bubble)   // the overlay permission may have just been granted
+        svc?.appOpen(true)
         svc?.onChange = { main.post { render() } }
         main.post(tick)
     }
@@ -98,6 +99,7 @@ class MainActivity : Activity() {
         super.onPause()
         svc?.onChange = null
         main.removeCallbacks(tick)
+        svc?.appOpen(false)
     }
 
     private fun start() {
@@ -414,6 +416,7 @@ class MainActivity : Activity() {
             if (value != null) addView(label(value, 15f, C.sub).apply { maxWidth = dp(180) })
             if (control != null) addView(control)
             if (f != null) setOnClickListener { f() }
+            else if (control is Switch) setOnClickListener { control.toggle() }   // the whole row, not just the small switch
         }
 
     private fun settings() {
@@ -465,15 +468,14 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun voiceName(name: String) = if (name.isEmpty()) "Automatic"
-        else name.substringAfter("-x-").substringBefore("-").uppercase() + " · " + name.substringBefore("-x-").uppercase()
+    private fun voiceName(name: String) = svc?.voices()?.firstOrNull { it.name == name }?.let { Voices.label(it) } ?: "Automatic"
 
     /** Every English voice on the phone, best first; tapping one plays a sample and keeps it. */
     private fun pickVoice(after: () -> Unit) {
         val s = svc ?: run { Toast.makeText(this, "Start Buddy first", Toast.LENGTH_SHORT).show(); return }
         val vs = s.voices()
         if (vs.isEmpty()) { Toast.makeText(this, "Install voices: Settings → System → Languages → Text-to-speech → Speech Services by Google", Toast.LENGTH_LONG).show(); return }
-        val names = vs.map { v -> "${v.locale.displayCountry} · ${v.name.substringAfter("-x-").substringBefore("-")}" + (if (v.isNetworkConnectionRequired) " · natural, online" else " · offline") }
+        val names = vs.map { Voices.label(it) }
         AlertDialog.Builder(this).setTitle("Buddy's voice")
             .setSingleChoiceItems(names.toTypedArray(), vs.indexOfFirst { it.name == prefs.voice }) { _, i -> s.preview(vs[i].name) }
             .setPositiveButton("Done") { _, _ -> after() }.show()
