@@ -31,18 +31,29 @@ var T = themes[UserDefaults.standard.string(forKey: "bit.theme") ?? (config["the
 
 let listCap = 3   // rows per list before "+ N more", so the card never scrolls
 
-/// A finished session in one short line, under the running ones: every session is listed, the busy ones first and in full.
-struct DoneRow: View {
-    let m: Model; let p: Pot; var fg: Color = .primary; var sub: Color = .secondary
+/// Finished sessions as chips that wrap, one per repo ("linkedin_agent ×14"): every one is listed, yet 25 of them take two or three lines,
+/// so the card keeps its quote. Click opens the newest in that repo; right-click ignores them all.
+struct DoneChips: View {
+    let m: Model; let pots: [Pot]; var fg: Color = .primary; var sub: Color = .secondary
     var body: some View {
-        Button { activate(p.s) } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundColor(sub)
-                Text(p.s.repo ?? "?").font(.system(size: 12, weight: .medium)).foregroundColor(fg).lineLimit(1)
-                Spacer(minLength: 4)
-                Text("done \(p.age)").font(.system(size: 11)).monospacedDigit().foregroundColor(sub)
-            }.padding(.horizontal, 6).padding(.vertical, 3).contentShape(Rectangle())
-        }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
+        let done = pots.filter(\.done)
+        let groups = Dictionary(grouping: done) { $0.s.repo ?? "?" }
+        let order = done.map { $0.s.repo ?? "?" }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+        if !done.isEmpty {
+            Flow(spacing: 4) {
+                Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundColor(sub).frame(height: 20)
+                ForEach(order, id: \.self) { repo in
+                    let g = groups[repo]!
+                    Button { activate(g[0].s) } label: {
+                        HStack(spacing: 3) {
+                            Text(repo).font(.system(size: 12, weight: .medium)).foregroundColor(fg).lineLimit(1)
+                            if g.count > 1 { Text("×\(g.count)").font(.system(size: 11)).monospacedDigit().foregroundColor(sub) }
+                        }.padding(.horizontal, 7).frame(height: 20).background(Capsule().fill(sub.opacity(0.12))).contentShape(Capsule())
+                    }.buttonStyle(.plain).help("done \(g[0].age)")
+                    .contextMenu { Button(g.count > 1 ? "Ignore these \(g.count) sessions" : "Ignore this session") { g.forEach { m.ignore($0.s) } } }
+                }
+            }
+        }
     }
 }
 

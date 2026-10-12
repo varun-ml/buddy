@@ -248,7 +248,7 @@ struct BurrowCard: View {
                     Text("Nothing on the stove. Buddy's napping.").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(bSub)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                 }
-                ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, sub: bSub).padding(.horizontal, 6) }
+                DoneChips(m: m, pots: pots, sub: bSub).padding(.horizontal, 6)
             }
 
             HStack(spacing: 8) {

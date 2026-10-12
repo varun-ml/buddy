@@ -217,7 +217,7 @@ struct GlassCard: View {
                             }.padding(.horizontal, 6).padding(.vertical, 7).contentShape(Rectangle())
                         }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }
                     }
-                    ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, sub: gSub) }
+                    DoneChips(m: m, pots: pots, sub: gSub).padding(.horizontal, 6).padding(.vertical, 4)
                 }.padding(.vertical, 6).padding(.horizontal, 8).background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55)))
             }
             if !s.team.isEmpty {

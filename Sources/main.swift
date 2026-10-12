@@ -128,6 +128,23 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-\(tab).png"))
         }
     } } }
+    // a busy day (25 finished sessions) must not crowd the quote off the card: the done list stays a few lines tall
+    var crowdFailed = false
+    MainActor.assumeIsolated {
+        let base = m.sessions
+        let crowd = (0..<25).map { i in Session(id: "done\(i)", cwd: "/x/r\(i % 10)", repo: "repo-\(i % 10)", branch: "main", state: "finished", activity: "", prompt: "p", ts: now - Double(600 + i * 60)) }
+        m.tab = "work"
+        for th in ["burrow", "glass", "ink"] {
+            T = themes[th]!; m.themeName = th
+            @MainActor func height() -> CGFloat { ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true)).nsImage?.size.height ?? 0 }
+            m.sessions = base; let h0 = height()
+            m.sessions = base + crowd; let h1 = height()
+            let r = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light)); r.scale = 2
+            if let t = r.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-busy.png")) }
+            if h1 - h0 > 90 { print("DONE LIST TOO TALL in \(th): 25 finished sessions add \(Int(h1 - h0)) pt, and the quote would be dropped"); crowdFailed = true }
+        }
+        m.sessions = base
+    }
     frozenTime = 800_000_000
     MainActor.assumeIsolated { for p in pets.map(\.name) {   // every coat of every pet, awake, plus a sleeping one, a kitten and the Burrow scene pet
         forcedPet = p
@@ -215,7 +232,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         costume = "off"; forcedPet = nil; frozenNow = nil
     }
     MainActor.assumeIsolated { Model().exportAvatars(to: dir + "/avatar") }   // what the phone app shows
-    print("snapshots in \(dir)"); exit(walkFailed ? 1 : 0)
+    print("snapshots in \(dir)"); exit(walkFailed || crowdFailed ? 1 : 0)
 }
 if CommandLine.arguments.contains("--dump") {
     let t = codexToday()

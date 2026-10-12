@@ -205,7 +205,7 @@ struct InkCard: View {
                 }.buttonStyle(.plain).contextMenu { Button("Ignore this session") { m.ignore(p.s) } }.padding(.horizontal, -6)
             }
             if pots.isEmpty && m.waiting.isEmpty { Text("Nothing running.").font(.system(size: 13)).foregroundColor(kSub).padding(.vertical, 4) }
-            ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, fg: Color.white.opacity(0.75), sub: kSub).padding(.horizontal, -6) }
+            DoneChips(m: m, pots: pots, fg: Color.white.opacity(0.75), sub: kSub)
 
             HStack(spacing: 0) {
                 if !statsRepos.isEmpty {
