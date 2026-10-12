@@ -7,7 +7,7 @@
                                 --urgent: waiting-for-you sound, and it jumps the queue
                                 --sticky KEY: the bubble stays until you tap it or something runs `buddy done KEY`
   buddy done KEY                clear the sticky bubble KEY (e.g. once the user has answered)
-  buddy pair                    show the QR code the Buddy phone app scans (needs "phone": true, see README)
+  buddy pair                    show the QR code that installs and pairs the phone app (needs "phone": true)
 """
 import json, os, subprocess, sys, time
 

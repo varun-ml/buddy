@@ -156,7 +156,9 @@ To set it up:
 1. Install Tailscale on the Mac and the phone, and sign in to the same account on both.
 2. Add `"phone": true` to `~/.config/buddy.json`, then run `./install.sh` again.
 3. Build the app once: `cd android && ./gradlew assembleDebug`. It needs JDK 17 and the Android SDK.
-4. Run `buddy pair`. Scan the first QR code with the phone camera to download the app, and allow the install. Then scan the second code, which opens the app and pairs it with this Mac.
+4. Right-click Buddy → **📱 Pair phone…** (or run `buddy pair`) and scan the code with the phone camera. A page opens with two buttons: **Install the app**, then **Pair with this Mac**.
+
+You pair once. After that the app updates itself: when the Mac has a newer build, the card shows **Update available**, and one tap installs it.
 
 Talking back to your sessions comes later. For now, answer them in Claude's own app (Remote Control).
 

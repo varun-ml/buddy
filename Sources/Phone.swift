@@ -46,3 +46,9 @@ extension Model {
         }
     }
 }
+
+/// Right-click → Pair phone…: phone.py draws the one QR code (install + pair) and opens it.
+func pairPhone() {
+    let dir = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().path
+    DispatchQueue.global().async { _ = run("/usr/bin/python3", [dir + "/phone.py", "--pair"]) }
+}

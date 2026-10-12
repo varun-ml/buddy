@@ -21,6 +21,7 @@ PHONE = os.environ.get('BUDDY_PHONE') or H + '/.claude/pet/phone'
 DONE = os.environ.get('BUDDY_DONE') or H + '/.claude/pet/done'
 TOKEN = os.environ.get('BUDDY_PHONE_TOKEN') or H + '/.config/buddy/phone-token'
 PORT = int(os.environ.get('BUDDY_PHONE_PORT') or 8732)
+APK = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'android/app/build/outputs/apk/debug/app-debug.apk')
 STALE, FORGET, SPEAK_WAIT = 15 * 60, 12 * 3600, 15   # the same "quiet" and "forget" as Buddy (Basics.swift); wait for the spoken line
 
 
@@ -67,6 +68,20 @@ def doing(activity):
     """'Claude wants to run: Bash npm test' → 'run Bash npm test'"""
     a = (activity or '').strip()
     return 'run ' + a.split('wants to run: ', 1)[1] if 'wants to run: ' in a else a
+
+
+def start_page(host, tok):
+    from urllib.parse import quote
+    pair = f'buddy://pair?url={quote("http://" + host, safe="")}&token={tok}'
+    btn = 'display:block;margin:14px 0;padding:18px;border-radius:14px;text-align:center;font:600 18px system-ui;text-decoration:none'
+    return f'''<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buddy</title>
+<body style="margin:0;padding:28px 20px;background:#F6F6FA;color:#1D1D1F;font:16px/1.45 system-ui">
+<h1 style="font:600 26px system-ui;margin:0 0 6px">Buddy on your phone</h1>
+<p style="color:#8A8A8E;margin:0 0 18px">Two taps. Skip step 1 if the app is already installed.</p>
+<a style="{btn};background:#fff;color:#007AFF;border:2px solid #007AFF" href="/buddy.apk?token={tok}">1 · Install the app</a>
+<p style="color:#8A8A8E;font-size:14px;margin:0 4px">Open the download and tap Install. Allow installs from your browser if asked.</p>
+<a style="{btn};background:#007AFF;color:#fff" href="{pair}">2 · Pair with this Mac</a>
+<p style="color:#8A8A8E;font-size:14px;margin:0 4px">After this, the app updates itself from your Mac. No more codes.</p>'''
 
 
 class Hub:
@@ -213,7 +228,9 @@ class Hub:
         else:
             head = 'All clear'
         mood = 'waiting' if waiting or stuck else 'busy' if working else 'calm'
-        return dict(headline=head, mood=mood, badge=len(waiting) + len(stuck), at=now, waiting=[row(s) for s in waiting],
+        apk = APK if os.path.exists(APK) else None
+        return dict(headline=head, mood=mood, badge=len(waiting) + len(stuck), at=now, apk=int(os.path.getmtime(apk)) if apk else 0,
+                    waiting=[row(s) for s in waiting],
                     stuck=[row(s) for s in stuck], working=[row(s) for s in working], yourTurn=[row(s) for s in done])
 
     def loop(self):
@@ -259,9 +276,11 @@ class Handler(BaseHTTPRequestHandler):
         if u.path.startswith('/avatar/'):
             p = os.path.join(PHONE, 'avatar', os.path.basename(u.path))
             return self.send(200, open(p, 'rb').read(), 'image/png') if os.path.exists(p) else self.send(404, {'error': 'no avatar'})
-        if u.path == '/buddy.apk':   # the app itself, built from android/ (see README); `buddy pair` shows a QR code for it
-            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'android/app/build/outputs/apk/debug/app-debug.apk')
-            return self.send(200, open(p, 'rb').read(), 'application/vnd.android.package-archive') if os.path.exists(p) else self.send(404, {'error': 'build it: cd android && ./gradlew assembleDebug'})
+        if u.path == '/buddy.apk':   # the app itself, built from android/ (see README)
+            return self.send(200, open(APK, 'rb').read(), 'application/vnd.android.package-archive') if os.path.exists(APK) \
+                else self.send(404, {'error': 'build it: cd android && ./gradlew assembleDebug'})
+        if u.path == '/start':   # what the pairing QR code opens on the phone: install, then pair, two taps
+            return self.send(200, start_page(self.headers.get('Host') or '', token()).encode(), 'text/html; charset=utf-8')
         if u.path == '/events':
             return self.stream(after)
         self.send(404, {'error': 'not found'})
@@ -298,22 +317,21 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     global hub
+    # started from Buddy's menu or launchd, PATH is bare: find Homebrew's qrencode and Tailscale's CLI too
+    os.environ['PATH'] = os.environ.get('PATH', '') + ':/opt/homebrew/bin:/usr/local/bin'
     host = os.environ.get('BUDDY_PHONE_HOST') or tailscale_ip()
     if not host:
         sys.exit('Tailscale is not running on this Mac. Open Tailscale, sign in, and run this again.')
     url = f'http://{host}:{PORT}'
-    if sys.argv[1:2] == ['--pair']:
-        from urllib.parse import urlencode
-        pair = 'buddy://pair?' + urlencode({'url': url, 'token': token()})   # the Pixel camera opens this link in the app
-        def qr(text):
-            if subprocess.run(['which', 'qrencode'], capture_output=True).returncode == 0:
-                subprocess.run(['qrencode', '-t', 'ansiutf8', text])
-            else:
-                print(text, '  (brew install qrencode to see it as a QR code)')
-        print('1. No app yet? Scan this with the Pixel camera to download it (then allow the install):', flush=True)
-        qr(f'{url}/buddy.apk?token={token()}')
-        print('2. Then scan this one: it opens the app and pairs it with this Mac.', flush=True)
-        qr(pair)
+    if sys.argv[1:2] == ['--pair']:   # `buddy pair`, or Buddy's menu → Pair phone…
+        link = f'{url}/start?token={token()}'
+        png = os.path.join(PHONE, 'pair.png')
+        os.makedirs(PHONE, exist_ok=True)
+        if subprocess.run(['which', 'qrencode'], capture_output=True).returncode != 0:
+            sys.exit(f'brew install qrencode, then run this again. Or open this on the phone: {link}')
+        subprocess.run(['qrencode', '-s', '12', '-m', '3', '-o', png, link])
+        subprocess.run(['open', png])
+        print('Scan the QR code with the phone camera: install the app and pair, two taps. (It holds your token: don\'t share it.)')
         return
     token()
     hub = Hub()

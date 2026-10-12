@@ -73,7 +73,7 @@ class MainActivity : Activity() {
         if (prefs.paired && svc == null) start()
     }
 
-    override fun onNewIntent(i: Intent) { super.onNewIntent(i); pair(i) }
+    override fun onNewIntent(i: Intent) { super.onNewIntent(i); pair(i); Update.result(this, i) }
 
     /** buddy://pair?url=…&token=… (the QR code from `buddy pair` on the Mac) */
     private fun pair(i: Intent?) {
@@ -136,6 +136,7 @@ class MainActivity : Activity() {
             prefs.muted -> banner("Muted until ${hm(prefs.mutedUntil / 1000.0)}", "Unmute", C.chip) { mute() }
             prefs.quiet() -> banner("Quiet hours until ${prefs.quietTo}:00 · notifications only", null, C.chip) {}
         }
+        if (online && card != null && Update.available(this, card.optLong("apk"))) banner("Update available", "Install", C.orangeBg) { Update.install(this, prefs) }
         if (shown == null) { col.addView(label("Connecting…", 15f, C.sub).apply { setPadding(dp(4), dp(16), 0, 0) }); return }
         val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; alpha = if (online) 1f else 0.5f }
         col.addView(body)
@@ -367,7 +368,7 @@ class MainActivity : Activity() {
             addView(label("Pair Buddy with your Mac", 24f, C.ink, medium = true).apply { setPadding(0, dp(20), 0, dp(16)) })
             for ((n, t) in listOf("1" to "Turn on Tailscale on the Mac and this phone (same account).",
                     "2" to "On the Mac: \"phone\": true in ~/.config/buddy.json, then ./install.sh",
-                    "3" to "Run buddy pair and scan the second code with the camera.")) {
+                    "3" to "Right-click Buddy → Pair phone…, then scan the code with the camera.")) {
                 addView(LinearLayout(this@MainActivity).apply {
                     setPadding(0, dp(8), 0, dp(8))
                     addView(label(n, 15f, C.platter, medium = true).apply { gravity = Gravity.CENTER; background = shape(C.accent, dp(12).toFloat()) },
@@ -450,7 +451,7 @@ class MainActivity : Activity() {
             ))
             val rows = mutableListOf<View>(settingRow("Paired with", Uri.parse(prefs.url).host ?: "–"),
                 settingRow("Re-pair", color = C.accent) {
-                    AlertDialog.Builder(context).setMessage("On the Mac, run buddy pair and scan the second code with this phone's camera.").setPositiveButton("OK", null).show()
+                    AlertDialog.Builder(context).setMessage("On the Mac: right-click Buddy → Pair phone…, then scan the code with this phone's camera.").setPositiveButton("OK", null).show()
                 })
             if (!getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName))
                 rows += settingRow("Stay connected in the background", color = C.accent) {
@@ -507,7 +508,7 @@ class MainActivity : Activity() {
                 line("More", "Tap the speech bubble to hear the details. Tap a row to read them."),
                 line("Quiet", "Mute 1 h, or quiet hours in Settings. Notifications stay."),
                 line("Offline", "Grey buddy. Back online, it reads the 3 newest; all are in Today."),
-                line("Re-pair", "Run buddy pair on the Mac, scan the second code."),
+                line("Re-pair", "On the Mac: right-click Buddy → Pair phone…, then scan."),
             ))
             addView(label("Got it", 16f, C.platter, medium = true).apply {
                 gravity = Gravity.CENTER; background = shape(C.accent, dp(14).toFloat())

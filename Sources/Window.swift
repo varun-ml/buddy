@@ -202,6 +202,7 @@ struct PetView: View {
                         Button((m.trackingSwitches ? "✓ " : "") + "Track app switching") { m.toggleSwitchTracking() }
                         Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
                     }
+                    if config["phone"] as? Bool == true { Button("📱 Pair phone…") { pairPhone() } }
                     Divider()
                     Button("Close Buddy") { NSApp.terminate(nil) }   // exit 0: launchd leaves it closed until next login
                 }
