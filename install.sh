@@ -21,7 +21,8 @@ stop_old() {
 
 if [ "${1:-}" = "--uninstall" ]; then
   stop_old
-  rm -f "$PLIST" "$HOME/.local/bin/buddy"
+  launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.buddy-pet.phone.plist" 2>/dev/null || true
+  rm -f "$PLIST" "$HOME/Library/LaunchAgents/com.buddy-pet.phone.plist" "$HOME/.local/bin/buddy"
   hooks remove
   rm -rf "$HOME/.claude/pet"   # session state and the message inbox
   if [ "${2:-}" = "--purge" ]; then rm -rf "$HOME/.config/buddy" "$HOME/.config/buddy.json"; echo "Settings, goals and tasks deleted."
@@ -83,6 +84,33 @@ cat > "$PLIST" <<EOF
 </plist>
 EOF
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
+
+# 4b. Buddy on the phone (optional): ~/.config/buddy.json "phone": true starts phone.py, which streams to the Android app over Tailscale
+PHONE_PLIST="$HOME/Library/LaunchAgents/com.buddy-pet.phone.plist"
+launchctl bootout "gui/$(id -u)" "$PHONE_PLIST" 2>/dev/null || true
+if python3 -c "import json,sys; sys.exit(0 if json.load(open('$HOME/.config/buddy.json')).get('phone') else 1)" 2>/dev/null; then
+  mkdir -p "$HOME/.claude/pet/phone"
+  cat > "$PHONE_PLIST" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.buddy-pet.phone</string>
+  <key>ProgramArguments</key><array><string>/usr/bin/python3</string><string>$DIR/phone.py</string></array>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string></dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>30</integer>
+  <key>StandardErrorPath</key><string>/tmp/buddy.phone.log</string>
+  <key>StandardOutPath</key><string>/tmp/buddy.phone.log</string>
+</dict>
+</plist>
+EOF
+  launchctl bootstrap "gui/$(id -u)" "$PHONE_PLIST"
+  echo "Phone server on (needs Tailscale). Pair the app: buddy pair"
+else
+  rm -f "$PHONE_PLIST"
+fi
 
 # 5. the `buddy` command: `buddy` starts it again; `buddy say "…"` lets any agent talk to you through it
 mkdir -p "$HOME/.local/bin" && ln -sf "$DIR/buddy-cli" "$HOME/.local/bin/buddy"

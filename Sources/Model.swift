@@ -160,6 +160,7 @@ final class Model: ObservableObject {
         breedIndex = (breedIndex + 1) % breeds.count
         UserDefaults.standard.set(breedIndex, forKey: "bit.breed")
         hearts += 1
+        MainActor.assumeIsolated { exportAvatars() }
         if !quiet { say("I'm a \(breed.name) now \(petKind.hello)", .happy, seconds: 3, kind: .ambient) }
     }
 

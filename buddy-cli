@@ -7,6 +7,7 @@
                                 --urgent: waiting-for-you sound, and it jumps the queue
                                 --sticky KEY: the bubble stays until you tap it or something runs `buddy done KEY`
   buddy done KEY                clear the sticky bubble KEY (e.g. once the user has answered)
+  buddy pair                    show the QR code the Buddy phone app scans (needs "phone": true, see README)
 """
 import json, os, subprocess, sys, time
 
@@ -15,6 +16,8 @@ if not args:
     subprocess.run(['launchctl', 'kickstart', f'gui/{os.getuid()}/com.buddy-pet.buddy'])
     sys.exit()
 done_dir = os.path.expanduser('~/.claude/pet/done')
+if args == ['pair']:
+    sys.exit(subprocess.run(['python3', os.path.join(os.path.dirname(os.path.realpath(__file__)), 'phone.py'), '--pair']).returncode)
 if args[0] == 'done' and len(args) == 2:
     os.makedirs(done_dir, exist_ok=True)
     open(os.path.join(done_dir, os.path.basename(args[1])), 'w').close()   # Buddy clears that bubble within 2 s

@@ -254,6 +254,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ n: Notification) {
         model.watchSwitches()
+        MainActor.assumeIsolated { model.exportAvatars() }
         NSApp.setActivationPolicy(.accessory)
         let s = NSScreen.main!.visibleFrame
         panel = Panel(contentRect: NSRect(x: s.maxX - small.width - 12, y: s.minY + 110, width: small.width, height: small.height),

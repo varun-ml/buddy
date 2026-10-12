@@ -214,6 +214,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         }
         costume = "off"; forcedPet = nil; frozenNow = nil
     }
+    MainActor.assumeIsolated { Model().exportAvatars(to: dir + "/avatar") }   // what the phone app shows
     print("snapshots in \(dir)"); exit(walkFailed ? 1 : 0)
 }
 if CommandLine.arguments.contains("--dump") {

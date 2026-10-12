@@ -15,6 +15,9 @@ step "self-test (logic, notifications, stats, walking rules, privacy)"
 step "hook test (beat.py)"
 python3 test_beat.py
 
+step "phone server (phone.py): hooks → events the phone app receives"
+python3 test_phone.py
+
 step "snapshots, and every buddy's walk must be visible"
 rm -rf /tmp/buddy-check-snapshots
 if ! out=$(/tmp/buddy-check --snapshot /tmp/buddy-check-snapshots); then echo "$out"; exit 1; fi   # exits 1 if a walk doesn't show
