@@ -35,7 +35,6 @@ struct Flow: Layout {
 struct BurrowCard: View {
     @ObservedObject var m: Model
     @State private var showAll = false
-    @State private var allPots = false
     @State private var hover: String?
     @State private var ticking: Set<String> = []
 
@@ -203,7 +202,7 @@ struct BurrowCard: View {
     // ---- Work
     var work: some View {
         let pots = m.pots
-        let shownPots = allPots ? pots : Array(pots.prefix(listCap))
+        let shownPots = pots.filter { !$0.done }
         let s = m.stats, quiet = m.ignoredRed.count
         let g = m.goal("today")
         return VStack(alignment: .leading, spacing: 0) {
@@ -249,10 +248,7 @@ struct BurrowCard: View {
                     Text("Nothing on the stove. Buddy's napping.").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(bSub)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                 }
-                if pots.count > listCap {
-                    Button(allPots ? "show less" : "+ \(pots.count - listCap) more") { withAnimation { allPots.toggle() } }.buttonStyle(.plain)
-                        .font(.system(size: 12, weight: .bold, design: .rounded)).foregroundColor(bClay).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
-                }
+                ForEach(pots.filter(\.done)) { DoneRow(m: m, p: $0, sub: bSub).padding(.horizontal, 6) }
             }
 
             HStack(spacing: 8) {
