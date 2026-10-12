@@ -53,11 +53,11 @@ Right-click Buddy → **Look** → **Theme**.
 
 Right-click Buddy → **Look** → **Buddy**. Three animals, six that aren't, each with five looks. Or `random` for a different one every day, or right-click → **🎲 Shuffle buddy** for a new one right now. Don't like one? Leave it out of both with `"skipBuddies": ["robot"]` in `~/.config/buddy.json`.
 
-<p align="center"><img src="docs/buddies.png" width="660" alt="The eight buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut and robot"></p>
+<p align="center"><img src="docs/buddies.png" width="495" alt="The nine buddies: cat, pug, bear, caped hero, ninja, wizard, astronaut, robot and Stitch"></p>
 
 Each has its own way of reacting: the hero flies off when a PR breaks, the ninja climbs a rope and throws a toy star, the wizard teleports and floats on a cloud, the astronaut plants a flag when you merge, the robot dances, and Stitch plays the ukulele, surfs, and goes full alien (extra arms, antennae, spines) when a PR breaks.
 
-<p align="center"><img src="docs/tricks.png" width="900" alt="Tricks: the hero flying, the ninja climbing, the wizard on a cloud, the astronaut's flag, the wizard's staff sparkling, the robot walking"></p>
+<p align="center"><img src="docs/tricks.png" width="900" alt="Tricks: the hero flying, the ninja climbing, the wizard on a cloud, the astronaut's flag, the wizard's staff sparkling, Stitch going full alien"></p>
 
 ## Costumes and festivals
 
