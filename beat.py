@@ -61,9 +61,19 @@ def last_reply(agent, d, transcript):
 # ---- Buddy on the phone: when the phone app is listening, a small model turns the reply into one sentence to read aloud.
 # The phone server (phone.py) touches PHONE/listening while a phone is connected; with no phone, nothing runs and nothing is spent.
 PHONE = os.environ.get('BUDDY_PHONE') or os.path.expanduser('~/.claude/pet/phone')
-SPEAK = ('Rewrite this coding agent\'s reply as ONE sentence to be read aloud to a developer who is away from the screen. '
-         'Under 25 words. Say what was done, or what it needs from them. No code, file paths, URLs, hashes, numbers '
-         'longer than 4 digits, or markdown. Reply with the sentence only.\n\n<reply>\n{}\n</reply>')
+SPEAK = ('Summarise this coding agent\'s reply for a developer who is away from the screen and cannot open the chat.\n'
+         'Line 1: ONE sentence to be read aloud, under 25 words: what was done, or what it needs from them.\n'
+         'Then 2 to 5 lines, each starting with "- " and under 15 words, in this order where they apply: '
+         '"Did: ...", "Result: ...", "Needs you: ...", "Next: ...".\n'
+         'No code, file paths, URLs, hashes, numbers longer than 4 digits, or markdown besides the dashes. '
+         'Reply with only these lines.\n\n<reply>\n{}\n</reply>')
+
+def parse_spoken(out):
+    """The model's answer → (the sentence to read aloud, up to 5 detail lines)."""
+    lines = [l.strip() for l in out.splitlines() if l.strip()]
+    said = [l for l in lines if not l.startswith(('-', '•', '*'))]
+    details = [l.lstrip('-•* ').strip()[:120] for l in lines if l.startswith(('-', '•', '*'))][:5]
+    return (' '.join(said[0].split())[:200] if said else ''), details
 
 def phone_listening():
     try:
@@ -75,17 +85,18 @@ def speak(path):
     """beat.py --speak SESSION_FILE < reply: write the spoken line into the session file (runs detached, after the hook returns)."""
     reply = sys.stdin.read()[-6000:]
     cmd = os.environ.get('BUDDY_SPEAK_CMD')   # tests: a stand-in for the model
-    cmd = cmd.split() if cmd else ['claude', '-p', '--model', 'haiku', '--strict-mcp-config', '--setting-sources', 'project', '--tools', '']   # no plugins, MCP or hooks: 1.5 s, not 9
+    # no MCP servers, plugins or hooks: about 4-6 s instead of 9. The prompt goes on stdin: an argument can be read as a flag's value
+    cmd = cmd.split() if cmd else ['claude', '-p', '--model', 'haiku', '--strict-mcp-config', '--setting-sources', 'project']
     try:
-        out = subprocess.run(cmd + [SPEAK.format(reply)], capture_output=True, text=True, timeout=40,
+        out = subprocess.run(cmd, input=SPEAK.format(reply), capture_output=True, text=True, timeout=40,
                              cwd=os.path.expanduser('~/.config/buddy')).stdout.strip()   # that folder: beat.py ignores this call's own hooks
     except Exception:
         return
-    line = ' '.join(out.split())[:200]
+    line, details = parse_spoken(out)
     if not line:
         return
     s = json.load(open(path))
-    s.update(spoken=line, spokenAt=time.time())
+    s.update(spoken=line, details=details, spokenAt=time.time())
     # ponytail: read-modify-write; a hook firing in the same instant could lose this line, and the phone then reads "said" instead
     tmp = f'{path}.{os.getpid()}.tmp'
     with open(tmp, 'w') as f:
@@ -237,7 +248,7 @@ def main():
         s.update(state=state, activity=activity)
     elif ev == 'Stop':
         s.update(state='finished', activity='', said=last_reply(agent, d, tp))
-        s.pop('spoken', None); s.pop('spokenAt', None)
+        s.pop('spoken', None); s.pop('details', None); s.pop('spokenAt', None)
         if phone_listening():
             speak_later = full_reply(agent, d, tp)
     elif ev == 'Notification':

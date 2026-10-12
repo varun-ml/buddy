@@ -151,12 +151,13 @@ class Hub:
             s = next((x for x in sessions if x['id'] == sid), None)
             if not s or s.get('state') != 'finished':
                 del self.pending[sid]; continue
-            line = s.get('spoken') if s.get('spokenAt', 0) >= at - 1 else None
+            fresh = s.get('spokenAt', 0) >= at - 1
+            line = s.get('spoken') if fresh else None
             if line or now - at > SPEAK_WAIT:
                 del self.pending[sid]
                 repo = s.get('repo') or 'A session'
                 said = line or s.get('said') or s.get('prompt') or ''
-                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {said}'.strip(), s)
+                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {said}'.strip(), s, details=s.get('details', []) if fresh else [])
         self.read_says(sessions)
 
     def read_says(self, sessions):
@@ -188,7 +189,7 @@ class Hub:
     def card(self):
         """The Mac card's Work tab, sessions only (no GitHub)."""
         now, ss = time.time(), self.sessions
-        row = lambda s: {k: s.get(k) for k in ('id', 'repo', 'activity', 'prompt', 'said', 'spoken', 'ts', 'turnStart', 'source')}
+        row = lambda s: {k: s.get(k) for k in ('id', 'repo', 'activity', 'prompt', 'said', 'spoken', 'details', 'ts', 'turnStart', 'source')}
         waiting = [s for s in ss if s.get('state') == 'waiting']
         stuck = [s for s in ss if s.get('state') == 'working' and now - s.get('ts', now) > STALE]
         working = [s for s in ss if s.get('state') == 'working' and s not in stuck]

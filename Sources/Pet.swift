@@ -223,7 +223,7 @@ struct Cat: View {
                 .offset(y: hm.y + (gliding ? -10 + sin(s * 3) * 2 : 0) + (wearing == "durga" && m.walking ? pandalHop(s) : 0))
                 .scaleEffect(x: m.facingLeft ? -1 : 1, y: 1)
                 accessory(s: s).frame(width: 84, height: 20).offset(y: -22)
-                if m.badge > 0 && !m.snoozed {
+                if m.badge > 0 && !m.snoozed && !drawingForPhone {   // the phone draws its own, live badge
                     Text("\(m.badge)").font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.white)
                         .frame(minWidth: 16, minHeight: 16).background(Circle().fill(Color.red))
                         .offset(x: 2, y: -2)

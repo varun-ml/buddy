@@ -110,6 +110,15 @@ class BuddyService : Service() {
         prefs.voice = v.name
     }
 
+    /** Read something now (the details, when you tap the speech bubble), unless Buddy is muted. */
+    fun speakNow(text: String) {
+        if (prefs.muted || !ttsReady || text.isBlank()) return
+        audio.requestAudioFocus(focus)
+        speaking = true
+        tts?.setSpeechRate(prefs.rate)
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "details")
+    }
+
     fun preview(name: String) {
         useVoice(name)
         tts?.setSpeechRate(prefs.rate)
@@ -262,7 +271,7 @@ class BuddyService : Service() {
     }
 
     /** The kind, before the words: rising two-tone = needs you, single beep = done, low buzz = failed, soft prompt = a message. */
-    private fun tone(kind: String) {
+    fun tone(kind: String) {
         val t = when (kind) {
             "needs-you" -> ToneGenerator.TONE_PROP_ACK
             "done" -> ToneGenerator.TONE_PROP_BEEP

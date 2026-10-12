@@ -6,7 +6,7 @@ T = tempfile.mkdtemp()
 HERE = os.path.dirname(os.path.abspath(__file__))
 with socket.socket() as s:
     s.bind(('127.0.0.1', 0)); port = s.getsockname()[1]
-stub = os.path.join(T, 'model'); open(stub, 'w').write('#!/bin/sh\necho "Fixed the login test, and all tests pass."\n'); os.chmod(stub, 0o755)
+stub = os.path.join(T, 'model'); open(stub, 'w').write('#!/bin/sh\ncat > /dev/null\nprintf "Fixed the login test, and all tests pass.\\n- Did: fixed the login test\\n- Result: all tests pass\\n"\n'); os.chmod(stub, 0o755)
 env = {**os.environ, 'HOME': os.path.join(T, 'home'), 'BUDDY_SESSIONS': os.path.join(T, 'sessions'), 'BUDDY_PHONE': os.path.join(T, 'phone'),
        'BUDDY_PHONE_TOKEN': os.path.join(T, 'token'), 'BUDDY_PHONE_HOST': '127.0.0.1',
        'BUDDY_PHONE_PORT': str(port), 'BUDDY_SPEAK_CMD': stub}
@@ -61,6 +61,7 @@ try:
     assert wait_for('resolve')['sticky'] == 's:c1'
     e = wait_for('done')
     assert e['spoken'] == 'myrepo is done. Fixed the login test, and all tests pass.', e   # the model's line, not the first line
+    assert e['details'] == ['Did: fixed the login test', 'Result: all tests pass'], e   # what you'd otherwise read the chat for
     c = get('/card')[1]
     assert c['headline'] == 'All clear' and c['yourTurn'][0]['repo'] == 'myrepo' and c['badge'] == 0, c
 
