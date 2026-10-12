@@ -38,4 +38,8 @@ path = os.path.join(inbox, f'{time.time():.3f}-{os.getpid()}.json')
 with open(path + '.tmp', 'w') as f:
     json.dump({'text': text, 'urgent': urgent, 'sticky': sticky, 'cwd': os.getcwd(), 'ts': time.time()}, f)
 os.replace(path + '.tmp', path)   # Buddy reads it within 2 s; it keeps for 2 h if Buddy is closed
+phone = os.environ.get('BUDDY_PHONE') or os.path.expanduser('~/.claude/pet/phone')
+if os.path.isdir(phone):   # the phone server (phone.py) is set up: it reads these and sends them to the phone
+    with open(os.path.join(phone, 'say.jsonl'), 'a') as f:
+        f.write(json.dumps({'text': text, 'urgent': urgent, 'sticky': sticky, 'cwd': os.getcwd(), 'ts': time.time()}) + '\n')
 print('Buddy will show it.')

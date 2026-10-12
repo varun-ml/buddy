@@ -1,0 +1,304 @@
+#!/usr/bin/env python3
+"""Buddy on the phone: streams your sessions' events to the Buddy Android app, over Tailscale only.
+
+  python3 phone.py           serve on this Mac's Tailscale address (port 8732)
+  python3 phone.py --pair    show the QR code the app scans (address + token)
+
+It reads the same session files Buddy does (~/.claude/pet/sessions, written by beat.py) and turns changes into events:
+  needs-you  a session waits for your OK        done    a session finished (with the line beat.py wrote to read aloud)
+  failed     a session went quiet for 15 min    say     `buddy say` (needs-you when --urgent)
+  resolve    a needs-you is no longer needed (the phone clears its notification)
+Today's events are kept in ~/.claude/pet/phone/events-<day>.jsonl, so a phone that was offline catches up.
+Endpoints (all need the token): GET /events?after=ID (server-sent events), /inbox?after=ID, /card, /avatar/<name>.png
+"""
+import hmac, json, os, plistlib, secrets, subprocess, sys, threading, time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
+
+H = os.path.expanduser('~')
+SESS = os.environ.get('BUDDY_SESSIONS') or H + '/.claude/pet/sessions'
+PHONE = os.environ.get('BUDDY_PHONE') or H + '/.claude/pet/phone'
+DONE = os.environ.get('BUDDY_DONE') or H + '/.claude/pet/done'
+TOKEN = os.environ.get('BUDDY_PHONE_TOKEN') or H + '/.config/buddy/phone-token'
+PORT = int(os.environ.get('BUDDY_PHONE_PORT') or 8732)
+STALE, FORGET, SPEAK_WAIT = 15 * 60, 12 * 3600, 15   # the same "quiet" and "forget" as Buddy (Basics.swift); wait for the spoken line
+
+
+def token():
+    if not os.path.exists(TOKEN):
+        os.makedirs(os.path.dirname(TOKEN), exist_ok=True)
+        with open(os.open(TOKEN, os.O_WRONLY | os.O_CREAT, 0o600), 'w') as f:
+            f.write(secrets.token_urlsafe(24))
+    return open(TOKEN).read().strip()
+
+
+def tailscale_ip():
+    for exe in ('tailscale', '/Applications/Tailscale.app/Contents/MacOS/Tailscale'):
+        try:
+            ip = subprocess.run([exe, 'ip', '-4'], capture_output=True, text=True, timeout=5).stdout.split()
+            if ip:
+                return ip[0]
+        except Exception:
+            pass
+    return None
+
+
+def ignored():
+    """Sessions you ignored in Buddy (✕ or right-click): the phone ignores them too."""
+    try:
+        d = plistlib.loads(subprocess.run(['defaults', 'export', 'Buddy', '-'], capture_output=True, timeout=5).stdout)
+        return set(d.get('bit.ignored', {}))
+    except Exception:
+        return set()
+
+
+def doing(activity):
+    """'Claude wants to run: Bash npm test' → 'run Bash npm test'"""
+    a = (activity or '').strip()
+    return 'run ' + a.split('wants to run: ', 1)[1] if 'wants to run: ' in a else a
+
+
+class Hub:
+    """The event log, and what the sessions looked like last time, to spot changes."""
+
+    def __init__(self):
+        os.makedirs(PHONE, exist_ok=True)
+        self.cv = threading.Condition()
+        self.day = time.strftime('%Y-%m-%d')
+        self.events = self._load()
+        self.last_id = self.events[-1]['id'] if self.events else 0
+        self.prev = None            # session id → state, last time we looked
+        self.quiet = set()          # sessions already reported quiet (until they move again)
+        self.pending = {}           # session id → when it finished, while we wait for its spoken line
+        self.open_says = set()      # sticky `buddy say` keys not yet cleared with `buddy done`
+        self.ign, self.ign_at = set(), 0
+        self.say_pos = os.path.getsize(self._says()) if os.path.exists(self._says()) else 0   # only new ones
+        self.sessions = []
+        self.clients = 0
+
+    def _file(self):
+        return os.path.join(PHONE, f'events-{self.day}.jsonl')
+
+    def _says(self):
+        return os.path.join(PHONE, 'say.jsonl')
+
+    def _load(self):
+        try:
+            return [json.loads(l) for l in open(self._file()) if l.strip()]
+        except FileNotFoundError:
+            return []
+
+    def emit(self, kind, text, spoken, s=None, **extra):
+        with self.cv:
+            if time.strftime('%Y-%m-%d') != self.day:   # a new day: a new file and an empty inbox; keep 2 days on disk
+                self.day, self.events = time.strftime('%Y-%m-%d'), []
+                old = 'events-' + time.strftime('%Y-%m-%d', time.localtime(time.time() - 2 * 86400))
+                for f in os.listdir(PHONE):
+                    if f.startswith('events-') and f < old:
+                        os.remove(os.path.join(PHONE, f))
+            # ids are milliseconds and only grow, across days and restarts, so a phone's "after" is never ambiguous
+            self.last_id = max(self.last_id + 1, int(time.time() * 1000))
+            e = dict(id=self.last_id, at=time.time(), kind=kind, text=text, spoken=spoken,
+                     session=(s or {}).get('id'), repo=(s or {}).get('repo'), source=(s or {}).get('source'), **extra)
+            self.events.append(e)
+            with open(self._file(), 'a') as f:
+                f.write(json.dumps(e) + '\n')
+            self.cv.notify_all()
+        return e
+
+    def load_sessions(self):
+        if time.time() - self.ign_at > 30:
+            self.ign, self.ign_at = ignored(), time.time()
+        out = []
+        for f in os.listdir(SESS) if os.path.isdir(SESS) else []:
+            if not f.endswith('.json'):
+                continue
+            try:
+                s = json.load(open(os.path.join(SESS, f)))
+            except Exception:
+                continue
+            if s.get('id') in self.ign or time.time() - s.get('ts', 0) > FORGET:
+                continue
+            out.append(s)
+        return out
+
+    def tick(self):
+        now = time.time()
+        self.sessions = sessions = self.load_sessions()
+        first = self.prev is None
+        prev, self.prev = self.prev or {}, {s['id']: s.get('state') for s in sessions}
+        for s in sessions:
+            sid, st, was, repo = s['id'], s.get('state'), prev.get(s['id']), s.get('repo') or 'A session'
+            if first:
+                continue   # starting up: today's log already has what happened before
+            if st == 'waiting' and was != 'waiting':
+                what = doing(s.get('activity'))
+                self.emit('needs-you', f'{repo} wants your OK\n{s.get("activity") or ""}'.strip(),
+                          f'{repo} needs your OK' + (f' to {what}.' if what.startswith('run ') else '.'), s, sticky='s:' + sid)
+            if was == 'waiting' and st != 'waiting':
+                self.emit('resolve', '', '', s, sticky='s:' + sid)
+            if st == 'finished' and was != 'finished':
+                self.pending[sid] = s.get('ts', now)
+            if st == 'working' and now - s.get('ts', now) > STALE:
+                if sid not in self.quiet:
+                    self.quiet.add(sid)
+                    self.emit('failed', f'{repo} has been quiet for 15 minutes\n{s.get("activity") or ""}'.strip(),
+                              f'{repo} has gone quiet. It may be stuck.', s)
+            else:
+                self.quiet.discard(sid)
+        # done: say it once the spoken line is in (beat.py writes it a few seconds after the turn ends), or after SPEAK_WAIT
+        for sid, at in list(self.pending.items()):
+            s = next((x for x in sessions if x['id'] == sid), None)
+            if not s or s.get('state') != 'finished':
+                del self.pending[sid]; continue
+            line = s.get('spoken') if s.get('spokenAt', 0) >= at - 1 else None
+            if line or now - at > SPEAK_WAIT:
+                del self.pending[sid]
+                repo = s.get('repo') or 'A session'
+                said = line or s.get('said') or s.get('prompt') or ''
+                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {said}'.strip(), s)
+        self.read_says(sessions)
+
+    def read_says(self, sessions):
+        """`buddy say` lines (buddy-cli appends them to say.jsonl while the phone server is on), and `buddy done` keys."""
+        p = self._says()
+        if os.path.exists(p) and os.path.getsize(p) > self.say_pos:
+            with open(p) as f:
+                f.seek(self.say_pos)
+                lines = f.read()
+                self.say_pos = f.tell()
+            for l in lines.splitlines():
+                try:
+                    j = json.loads(l)
+                except ValueError:
+                    continue
+                cwd = os.path.realpath(j.get('cwd') or '/')   # /tmp and /private/tmp are one folder
+                s = next((x for x in sessions if x.get('cwd') and (cwd + '/').startswith(os.path.realpath(x['cwd']) + '/')), None)
+                who = (s or {}).get('repo') or os.path.basename(cwd.rstrip('/')) or 'Buddy'
+                key = j.get('sticky')
+                self.emit('needs-you' if j.get('urgent') else 'say', f'{who}: {j["text"]}', f'{who}: {j["text"]}', s,
+                          **({'sticky': 'say:' + key} if key else {}))
+                if key:
+                    self.open_says.add(key)
+        for key in list(self.open_says):
+            if os.path.exists(os.path.join(DONE, key)):
+                self.open_says.discard(key)
+                self.emit('resolve', '', '', None, sticky='say:' + key)
+
+    def card(self):
+        """The Mac card's Work tab, sessions only (no GitHub)."""
+        now, ss = time.time(), self.sessions
+        row = lambda s: {k: s.get(k) for k in ('id', 'repo', 'activity', 'prompt', 'said', 'spoken', 'ts', 'turnStart', 'source')}
+        waiting = [s for s in ss if s.get('state') == 'waiting']
+        stuck = [s for s in ss if s.get('state') == 'working' and now - s.get('ts', now) > STALE]
+        working = [s for s in ss if s.get('state') == 'working' and s not in stuck]
+        done = sorted([s for s in ss if s.get('state') == 'finished' and now - s.get('ts', 0) < 3600], key=lambda s: -s.get('ts', 0))
+        if waiting:
+            head = f'{waiting[0].get("repo") or "A session"} is waiting for your OK'
+        elif stuck:
+            head = f'{stuck[0].get("repo") or "A session"} has gone quiet'
+        elif working:
+            head = f'{working[0].get("repo")} is cooking' if len(working) == 1 else f'{len(working)} sessions cooking'
+        else:
+            head = 'All clear'
+        mood = 'waiting' if waiting or stuck else 'busy' if working else 'calm'
+        return dict(headline=head, mood=mood, badge=len(waiting) + len(stuck), at=now, waiting=[row(s) for s in waiting],
+                    stuck=[row(s) for s in stuck], working=[row(s) for s in working], yourTurn=[row(s) for s in done])
+
+    def loop(self):
+        while True:
+            try:
+                self.tick()
+                if self.clients:   # beat.py writes spoken lines only while this file is fresh
+                    open(os.path.join(PHONE, 'listening'), 'w').close()
+            except Exception as e:
+                print('tick:', e, file=sys.stderr)
+            time.sleep(1)
+
+
+hub = None
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
+
+    def log_message(self, *a):
+        pass
+
+    def send(self, code, body, ctype='application/json'):
+        b = body if isinstance(body, bytes) else json.dumps(body).encode()
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(b)))
+        self.end_headers()
+        self.wfile.write(b)
+
+    def do_GET(self):
+        u = urlparse(self.path)
+        q = parse_qs(u.query)
+        got = (self.headers.get('Authorization') or '').removeprefix('Bearer ').strip() or (q.get('token') or [''])[0]
+        if not hmac.compare_digest(got, token()):
+            return self.send(401, {'error': 'pair the app first: python3 phone.py --pair'})
+        after = int((q.get('after') or [self.headers.get('Last-Event-ID') or 0])[0] or 0)
+        if u.path == '/card':
+            return self.send(200, hub.card())
+        if u.path == '/inbox':
+            with hub.cv:
+                return self.send(200, [e for e in hub.events if e['id'] > after])
+        if u.path.startswith('/avatar/'):
+            p = os.path.join(PHONE, 'avatar', os.path.basename(u.path))
+            return self.send(200, open(p, 'rb').read(), 'image/png') if os.path.exists(p) else self.send(404, {'error': 'no avatar'})
+        if u.path == '/events':
+            return self.stream(after)
+        self.send(404, {'error': 'not found'})
+
+    def stream(self, after):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/event-stream')
+        self.send_header('Cache-Control', 'no-cache')
+        self.end_headers()
+        hub.clients += 1
+        open(os.path.join(PHONE, 'listening'), 'w').close()
+        try:
+            self.wfile.write(b'retry: 2000\n\n')
+            while True:
+                with hub.cv:
+                    new = [e for e in hub.events if e['id'] > after]
+                    if not new:
+                        hub.cv.wait(20)
+                        new = [e for e in hub.events if e['id'] > after]
+                for e in new:
+                    self.wfile.write(f'id: {e["id"]}\ndata: {json.dumps(e)}\n\n'.encode())
+                    after = e['id']
+                if not new:
+                    self.wfile.write(b': ping\n\n')   # keeps mobile networks from dropping a quiet connection
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            pass
+        finally:
+            hub.clients -= 1
+
+
+def main():
+    global hub
+    host = os.environ.get('BUDDY_PHONE_HOST') or tailscale_ip()
+    if not host:
+        sys.exit('Tailscale is not running on this Mac. Open Tailscale, sign in, and run this again.')
+    url = f'http://{host}:{PORT}'
+    if sys.argv[1:2] == ['--pair']:
+        pair = json.dumps({'url': url, 'token': token()})
+        subprocess.run(['qrencode', '-t', 'ansiutf8', pair]) if subprocess.run(['which', 'qrencode'], capture_output=True).returncode == 0 \
+            else print('(brew install qrencode to show a QR code)')
+        print(f'Scan this in the Buddy app, or type in: {url}  and the token in {TOKEN}')
+        return
+    token()
+    hub = Hub()
+    threading.Thread(target=hub.loop, daemon=True).start()
+    srv = ThreadingHTTPServer((host, PORT), Handler)
+    srv.daemon_threads = True
+    print(f'Buddy phone server on {url}', flush=True)
+    srv.serve_forever()
+
+
+if __name__ == '__main__':
+    main()

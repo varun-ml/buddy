@@ -29,8 +29,8 @@ def auto_reviewed(transcript):
     except Exception:
         return False
 
-def last_reply(agent, d, transcript):
-    """The agent's own last words this turn, first real line, for the "done" bubble."""
+def full_reply(agent, d, transcript):
+    """The agent's whole last message this turn."""
     text = d.get('last_assistant_message') or ''
     if not text:
         try:
@@ -46,13 +46,51 @@ def last_reply(agent, d, transcript):
                     break
         except Exception:
             return ''
-    lines = [l.strip() for l in text.splitlines()]
+    return text
+
+def last_reply(agent, d, transcript):
+    """The agent's own last words this turn, first real line, for the "done" bubble."""
+    lines = [l.strip() for l in full_reply(agent, d, transcript).splitlines()]
     # prose first: skip headings, code fences and JSON (Codex's auto-review replies are JSON)
     for line in [l for l in lines if not l.startswith(('#', '```', '{', '|'))] + [l for l in lines if l.startswith('#')]:
         line = re.sub(r'^(\d+[.)]|[>*\-•#]+)\s*', '', line).replace('**', '').replace('`', '').strip()
         if len(line) > 3:
             return line[:140]
     return ''
+
+# ---- Buddy on the phone: when the phone app is listening, a small model turns the reply into one sentence to read aloud.
+# The phone server (phone.py) touches PHONE/listening while a phone is connected; with no phone, nothing runs and nothing is spent.
+PHONE = os.environ.get('BUDDY_PHONE') or os.path.expanduser('~/.claude/pet/phone')
+SPEAK = ('Rewrite this coding agent\'s reply as ONE sentence to be read aloud to a developer who is away from the screen. '
+         'Under 25 words. Say what was done, or what it needs from them. No code, file paths, URLs, hashes, numbers '
+         'longer than 4 digits, or markdown. Reply with the sentence only.\n\n<reply>\n{}\n</reply>')
+
+def phone_listening():
+    try:
+        return time.time() - os.path.getmtime(os.path.join(PHONE, 'listening')) < 120
+    except OSError:
+        return False
+
+def speak(path):
+    """beat.py --speak SESSION_FILE < reply: write the spoken line into the session file (runs detached, after the hook returns)."""
+    reply = sys.stdin.read()[-6000:]
+    cmd = os.environ.get('BUDDY_SPEAK_CMD')   # tests: a stand-in for the model
+    cmd = cmd.split() if cmd else ['claude', '-p', '--model', 'haiku', '--strict-mcp-config', '--setting-sources', 'project', '--tools', '']   # no plugins, MCP or hooks: 1.5 s, not 9
+    try:
+        out = subprocess.run(cmd + [SPEAK.format(reply)], capture_output=True, text=True, timeout=40,
+                             cwd=os.path.expanduser('~/.config/buddy')).stdout.strip()   # that folder: beat.py ignores this call's own hooks
+    except Exception:
+        return
+    line = ' '.join(out.split())[:200]
+    if not line:
+        return
+    s = json.load(open(path))
+    s.update(spoken=line, spokenAt=time.time())
+    # ponytail: read-modify-write; a hook firing in the same instant could lose this line, and the phone then reads "said" instead
+    tmp = f'{path}.{os.getpid()}.tmp'
+    with open(tmp, 'w') as f:
+        json.dump(s, f)
+    os.replace(tmp, path)
 
 # ---- Agents. Each one says how to recognise its hook payload and how to read it.
 # To add one (Cursor, Gemini CLI, …): subclass Claude, override what differs, and put it in AGENTS before Claude.
@@ -199,6 +237,9 @@ def main():
         s.update(state=state, activity=activity)
     elif ev == 'Stop':
         s.update(state='finished', activity='', said=last_reply(agent, d, tp))
+        s.pop('spoken', None); s.pop('spokenAt', None)
+        if phone_listening():
+            speak_later = full_reply(agent, d, tp)
     elif ev == 'Notification':
         msg = d.get('message') or ''
         # ponytail: only permission asks count as "waiting"; the idle "waiting for input" ping is just noise
@@ -212,6 +253,10 @@ def main():
     with open(tmp, 'w') as f:
         json.dump(s, f)
     os.replace(tmp, path)
+    if ev == 'Stop' and phone_listening() and speak_later.strip():
+        p = subprocess.Popen([sys.executable, os.path.abspath(__file__), '--speak', path], stdin=subprocess.PIPE,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+        p.stdin.write(speak_later); p.stdin.close()   # the hook returns now; the line arrives a few seconds later
 
 
 def install_hooks(mode, beat):
@@ -247,6 +292,9 @@ def install_hooks(mode, beat):
         print(('hooks added: ' if mode == 'add' else 'hooks removed: ') + path)
 
 import traceback
+if sys.argv[1:2] == ['--speak']:
+    speak(sys.argv[2])
+    sys.exit()
 if sys.argv[1:2] == ['--hooks']:   # install.sh: beat.py --hooks add|remove
     install_hooks(sys.argv[2], os.path.abspath(__file__))
     sys.exit()
