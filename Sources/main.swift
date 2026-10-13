@@ -13,6 +13,11 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
                                              "bit.ignored": [String: Double](), "bit.breed": 0], forName: UserDefaults.argumentDomain)
     precondition(dayMonth("14 Feb") == "14 Feb" && dayMonth("Feb 14") == "14 Feb" && dayMonth("14/02") == "14 Feb" && dayMonth("2019-02-14") == "14 Feb" && dayMonth("June 3") == "3 Jun")
     precondition(dayMonth("banana") == nil)
+    // Buddy stuck behind the menu bar (12 Oct: 10 pt of 108 showing) must count as lost; a normal spot must not
+    let scr = [NSRect(x: 0, y: 0, width: 1920, height: 1055)]
+    precondition(!mostlyVisible(NSRect(x: 426, y: 1045, width: 100, height: 108), on: scr))
+    precondition(mostlyVisible(NSRect(x: 426, y: 110, width: 100, height: 108), on: scr))
+    precondition(!mostlyVisible(NSRect(x: -500, y: 110, width: 100, height: 108), on: scr))
     let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "d MMM"
     precondition(daysUntil(f.string(from: Date())) == 0)
     precondition(daysUntil(f.string(from: Date().addingTimeInterval(7 * 86400))) == 7)

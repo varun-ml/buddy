@@ -399,8 +399,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !moving && tick % 8 != 0 { return }
         placeLitter()
         if m.squatting { return }
-        // never lose Buddy: if the window ended up off every screen, put it back on the floor
-        if !NSScreen.screens.contains(where: { $0.visibleFrame.intersects(panel.frame) }) {
+        // never lose Buddy: if the window ended up mostly off every screen (or behind the menu bar), put it back on the floor
+        if !mostlyVisible(panel.frame, on: NSScreen.screens.map(\.visibleFrame)) {
             let v = NSScreen.main!.visibleFrame
             panel.setFrameOrigin(NSPoint(x: v.maxX - panel.frame.width - 12, y: v.minY + 110))
         }
@@ -457,6 +457,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// Always on the move while you're at the desk. Stands still only under your cursor, with the card open, napping,
 /// or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
+/// At least half of Buddy is inside one screen's usable area. A sliver peeking out below the menu bar does not count.
+func mostlyVisible(_ f: NSRect, on screens: [NSRect]) -> Bool {
+    screens.contains { let i = $0.intersection(f); return i.width >= f.width / 2 && i.height >= f.height / 2 }
+}
+
 func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double) -> Bool {
     !expanded && !hovering && !snoozed && idle <= 120
 }
