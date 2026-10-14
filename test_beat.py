@@ -28,6 +28,15 @@ hook(session_id='c1', hook_event_name='Notification', cwd=WORK, message='Claude 
 assert session('c1')['state'] == 'waiting'   # the idle ping changes nothing
 hook(session_id='c1', hook_event_name='Stop', cwd=WORK, last_assistant_message='## Summary\n1. **All tests pass** now.\n```\nok\n```')
 s = session('c1'); assert s['state'] == 'finished' and s['said'] == 'All tests pass now.', s
+
+# the app's title names the session (your rename beats its own title); no title keeps the folder name
+ct = os.path.join(T, 'c2.jsonl')
+open(ct, 'w').write(json.dumps({'type': 'ai-title', 'aiTitle': 'Fix login'}) + '\n' + json.dumps({'type': 'user', 'message': {'content': 'hi'}}) + '\n')
+hook(session_id='c2', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=ct, prompt='go')
+assert session('c2')['repo'] == 'Fix login', session('c2')
+open(ct, 'a').write(json.dumps({'type': 'custom-title', 'customTitle': 'MODS Avatar'}) + '\n' + json.dumps({'type': 'ai-title', 'aiTitle': 'Fix login'}) + '\n')
+hook(session_id='c2', hook_event_name='Stop', cwd=WORK, transcript_path=ct)
+assert session('c2')['repo'] == 'MODS Avatar', session('c2')
 hook(session_id='c1', hook_event_name='SessionEnd', cwd=WORK)
 assert session('c1') is None
 

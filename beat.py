@@ -29,6 +29,23 @@ def auto_reviewed(transcript):
     except Exception:
         return False
 
+def session_title(transcript):
+    """The name the Claude app shows for this session: your rename, else its own title. '' if none (Codex, a new session)."""
+    try:
+        with open(transcript, 'rb') as f:
+            f.seek(max(0, os.path.getsize(transcript) - 512_000))   # the app re-writes the title every few turns, so the tail has it
+            tail = f.read().splitlines()
+    except Exception:
+        return ''
+    for kind, key in ((b'"custom-title"', 'customTitle'), (b'"ai-title"', 'aiTitle')):
+        for line in reversed(tail):
+            if kind in line:
+                try:
+                    return json.loads(line).get(key, '').strip()
+                except Exception:
+                    pass
+    return ''
+
 def full_reply(agent, d, transcript):
     """The agent's whole last message this turn."""
     text = d.get('last_assistant_message') or ''
@@ -227,7 +244,8 @@ def main():
     except Exception:
         s = {}
     cwd = d.get('cwd') or s.get('cwd', '')
-    s.update(id=sid, cwd=cwd, repo=os.path.basename(cwd.rstrip('/')), ts=time.time())
+    # the session's name everywhere (card, bubbles, phone): the app's title, else the folder (a worktree's is a random word pair)
+    s.update(id=sid, cwd=cwd, repo=session_title(tp) or os.path.basename(cwd.rstrip('/')), ts=time.time())
     if 'termApp' not in s and 'herdrPane' not in s:
         s.update(where_it_runs())   # once per session; a few ps calls
     if 'source' not in s:
