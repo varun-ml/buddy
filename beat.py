@@ -98,6 +98,18 @@ def phone_listening():
     except OSError:
         return False
 
+def speak_env():
+    """The summary call's login: a `claude setup-token` token in ~/.config/buddy/claude-token if you saved one
+    (lasts a year, nothing else rewrites it), else whatever `claude` uses (the keychain login)."""
+    env = dict(os.environ)
+    try:
+        tok = open(os.path.expanduser('~/.config/buddy/claude-token')).read().strip()
+    except OSError:
+        return env
+    if tok:
+        env['CLAUDE_CODE_OAUTH_TOKEN'] = tok
+    return env
+
 def summaries_failed(failed, msg=''):
     """Tell you once every 3 hours that the summary call fails, and clear the bubble when it works again.
     Several speak() calls run at once, so the marker file is locked: size > 0 = you were told, mtime = when."""
@@ -133,7 +145,7 @@ def speak(path):
     cmd = cmd.split() if cmd else ['claude', '-p', '--model', 'haiku', '--strict-mcp-config', '--setting-sources', 'project']
     try:
         r = subprocess.run(cmd, input=SPEAK.format(reply), capture_output=True, text=True, timeout=40,
-                           cwd=os.path.expanduser('~/.config/buddy'))   # that folder: beat.py ignores this call's own hooks
+                           cwd=os.path.expanduser('~/.config/buddy'), env=speak_env())   # that folder: beat.py ignores this call's own hooks
     except Exception:
         return
     if r.returncode:   # e.g. "Failed to authenticate…" on stdout: never read a CLI error aloud, but say once that summaries are off

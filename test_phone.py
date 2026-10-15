@@ -106,4 +106,11 @@ assert len(says()) == 1 and 'log in again' in says()[0] and '/' not in json.load
 assert not os.path.exists(os.path.join(env['BUDDY_DONE'], 'claude-login'))
 subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', sf], input='reply', text=True, env=env, check=True)
 assert os.path.exists(os.path.join(env['BUDDY_DONE'], 'claude-login')) and json.load(open(sf))['spoken'], json.load(open(sf))
+# a saved setup token reaches the summary call (and nothing else is needed); the stub reports whether it got it
+tokstub = os.path.join(T, 'tokstub'); open(tokstub, 'w').write('#!/bin/sh\ncat > /dev/null\necho "token is $CLAUDE_CODE_OAUTH_TOKEN."\n'); os.chmod(tokstub, 0o755)
+open(env['HOME'] + '/.config/buddy/claude-token', 'w').write('tok-123\n')
+tf = os.path.join(T, 'tok.json'); json.dump({'state': 'done'}, open(tf, 'w'))
+subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', tf], input='reply', text=True, env={**env, 'BUDDY_SPEAK_CMD': tokstub}, check=True)
+assert json.load(open(tf))['spoken'] == 'token is tok-123.', json.load(open(tf))
+os.remove(env['HOME'] + '/.config/buddy/claude-token')
 print('phone test ok')
