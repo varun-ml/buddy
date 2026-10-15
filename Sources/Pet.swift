@@ -62,7 +62,7 @@ struct PetKind {
     let sceneEars: (inout GraphicsContext, _ fur: Color, _ dark: Color) -> Void   // the pet in Burrow's scene
 }
 
-let pets = [catPet, pugPet, bearPet, heroBuddy, ninjaBuddy, wizardBuddy, astronautBuddy, robotBuddy, stitchBuddy]
+let pets = [catPet, pugPet, bearPet, heroBuddy, ninjaBuddy, wizardBuddy, astronautBuddy, robotBuddy, stitchBuddy, chemistBuddy]
 var petKind: PetKind { pets.first { $0.name == pet } ?? catPet }
 var breeds: [Breed] { petKind.coats }
 
