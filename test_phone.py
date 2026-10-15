@@ -73,6 +73,21 @@ try:
     subprocess.run([os.path.join(HERE, 'buddy-cli'), 'done', 'l3'], env=env, check=True, capture_output=True)
     assert wait_for('resolve', 2)['sticky'] == 'say:l3'
 
+    # car mode: the details are read aloud too, as sentences, without paths or hashes; off again, the short line
+    from phone import car_text
+    assert car_text('Fixed login', ['Did: fixed login/signup flow', 'Result: e3215623f', 'Needs you: defaced README check']) == \
+        'Fixed login. Did: fixed flow. Needs you: defaced README check.'
+    assert len(car_text('x', ['Did: ' + 'a' * 150, 'Result: ' + 'b' * 150, 'Next: ' + 'c' * 100])) <= 350 and 'Next' not in car_text('x', ['Did: ' + 'a' * 150, 'Result: ' + 'b' * 150, 'Next: ' + 'c' * 100])
+    subprocess.run([os.path.join(HERE, 'buddy-cli'), 'car', 'on'], cwd=WORK, env=env, check=True, capture_output=True)
+    assert 'Car mode on' in wait_for('say', 2)['spoken']
+    hook(session_id='c1', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='again')
+    time.sleep(1.5)   # let phone.py see it working, or finished → finished is no change
+    hook(session_id='c1', hook_event_name='Stop', cwd=WORK, last_assistant_message='ok')
+    e = wait_for('done', 2)
+    assert e['spoken'] == 'myrepo is done. Fixed the login test, and all tests pass. Did: fixed the login test. Result: all tests pass.', e
+    subprocess.run([os.path.join(HERE, 'buddy-cli'), 'car', 'off'], env=env, check=True, capture_output=True)
+    assert not os.path.exists(os.path.join(env['BUDDY_PHONE'], 'car'))
+
     # an offline phone catches up from the inbox, in order, nothing twice
     inbox = get('/inbox?after=0')[1]
     assert [x['kind'] for x in inbox] == [x['kind'] for x in got] and len({x['id'] for x in inbox}) == len(inbox), (inbox, got)
@@ -84,4 +99,11 @@ bad = os.path.join(T, 'bad'); open(bad, 'w').write('#!/bin/sh\ncat > /dev/null\n
 sf = os.path.join(T, 'speak-check.json'); json.dump({'state': 'done'}, open(sf, 'w'))
 subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', sf], input='reply', text=True, env={**env, 'BUDDY_SPEAK_CMD': bad}, check=True)
 assert 'spoken' not in json.load(open(sf)), json.load(open(sf))
+# ...and you are told once (not per session) that summaries are off, and the bubble clears when they work again
+says = lambda: [l for l in open(os.path.join(env['BUDDY_PHONE'], 'say.jsonl')) if 'summaries are off' in l]
+subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', sf], input='reply', text=True, env={**env, 'BUDDY_SPEAK_CMD': bad}, check=True)
+assert len(says()) == 1 and 'log in again' in says()[0] and '/' not in json.loads(says()[0])['text'], says()
+assert not os.path.exists(os.path.join(env['BUDDY_DONE'], 'claude-login'))
+subprocess.run([sys.executable, os.path.join(HERE, 'beat.py'), '--speak', sf], input='reply', text=True, env=env, check=True)
+assert os.path.exists(os.path.join(env['BUDDY_DONE'], 'claude-login')) and json.load(open(sf))['spoken'], json.load(open(sf))
 print('phone test ok')

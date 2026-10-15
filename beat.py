@@ -98,6 +98,33 @@ def phone_listening():
     except OSError:
         return False
 
+def summaries_failed(failed, msg=''):
+    """Tell you once every 3 hours that the summary call fails, and clear the bubble when it works again.
+    Several speak() calls run at once, so the marker file is locked: size > 0 = you were told, mtime = when."""
+    import fcntl
+    try:
+        fd = os.open(os.path.join(PHONE, 'summary-failed'), os.O_RDWR | os.O_CREAT, 0o600)
+    except OSError:
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        told = os.fstat(fd)
+        if failed and told.st_size and time.time() - told.st_mtime < 3 * 3600:
+            return
+        if not failed and not told.st_size:
+            return
+        os.ftruncate(fd, 0)
+        if failed:
+            os.write(fd, b'1')
+        cli = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'buddy-cli')]
+        # from Buddy's own folder: the bubble is Buddy's, not the session that happened to finish
+        subprocess.run(cli + (['say', msg, '--sticky', 'claude-login'] if failed else ['done', 'claude-login']),
+                       cwd=os.path.expanduser('~/.config/buddy'), capture_output=True, timeout=10)
+    except Exception:
+        pass
+    finally:
+        os.close(fd)
+
 def speak(path):
     """beat.py --speak SESSION_FILE < reply: write the spoken line into the session file (runs detached, after the hook returns)."""
     reply = sys.stdin.read()[-6000:]
@@ -109,8 +136,12 @@ def speak(path):
                            cwd=os.path.expanduser('~/.config/buddy'))   # that folder: beat.py ignores this call's own hooks
     except Exception:
         return
-    if r.returncode:   # e.g. "Failed to authenticate…" on stdout: never read a CLI error aloud
+    if r.returncode:   # e.g. "Failed to authenticate…" on stdout: never read a CLI error aloud, but say once that summaries are off
+        login = re.search(r'authenticat|login|oauth|401', r.stdout + r.stderr, re.I)
+        summaries_failed(True, 'Phone summaries are off. Run claude on the Mac and log in again.' if login
+                         else 'Phone summaries failed. Check claude on the Mac.')
         return
+    summaries_failed(False)
     out = r.stdout.strip()
     line, details = parse_spoken(out)
     if not line:

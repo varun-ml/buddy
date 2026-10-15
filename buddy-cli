@@ -7,6 +7,7 @@
                                 --urgent: waiting-for-you sound, and it jumps the queue
                                 --sticky KEY: the bubble stays until you tap it or something runs `buddy done KEY`
   buddy done KEY                clear the sticky bubble KEY (e.g. once the user has answered)
+  buddy car on|off              car mode: the phone also reads each finished session's details aloud (off by itself after 12 h)
   buddy pair                    show the QR code that installs and pairs the phone app (needs "phone": true)
 """
 import json, os, subprocess, sys, time
@@ -22,6 +23,15 @@ if args[0] == 'done' and len(args) == 2:
     os.makedirs(done_dir, exist_ok=True)
     open(os.path.join(done_dir, os.path.basename(args[1])), 'w').close()   # Buddy clears that bubble within 2 s
     print('Cleared.'); sys.exit()
+if args[0] == 'car' and len(args) == 2 and args[1] in ('on', 'off'):
+    flag = os.path.join(os.environ.get('BUDDY_PHONE') or os.path.expanduser('~/.claude/pet/phone'), 'car')
+    if args[1] == 'off':
+        try: os.remove(flag)
+        except FileNotFoundError: pass
+        print('Car mode off.'); sys.exit()
+    os.makedirs(os.path.dirname(flag), exist_ok=True)
+    open(flag, 'w').close()   # phone.py reads its age: on for 12 hours from now
+    args = ['say', 'Car mode on. I will read the details of each finished session, for the next 12 hours.']   # the phone confirms it
 if args[0] != 'say' or len(args) < 2:
     print(__doc__); sys.exit(2)
 urgent = '--urgent' in args

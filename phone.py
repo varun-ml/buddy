@@ -58,10 +58,36 @@ def speakable(text):
     words = []
     for w in (text or '').split():
         bare = w.strip('.,;:()[]`"\'')
-        if '://' in bare or '/' in bare or re.fullmatch(r'#?[0-9a-f]{7,}', bare) or re.fullmatch(r'[#\d,._:-]{5,}', bare):
+        if '://' in bare or '/' in bare or re.fullmatch(r'#?(?=[a-f]*\d)[0-9a-f]{7,}', bare) or re.fullmatch(r'[#\d,._:-]{5,}', bare):
             continue
         words.append(w)
     return re.sub(r'\s+([.,;:])', r'\1', ' '.join(words)).strip()
+
+
+CAR_HOURS, CAR_MAX = 12, 350   # car mode switches itself off; a needs-you waits for the line being read, so keep it short
+
+
+def car_on():
+    """`buddy car on` made the flag file in the last 12 hours: read each finished session's details aloud too."""
+    try:
+        return time.time() - os.stat(os.path.join(PHONE, 'car')).st_mtime < CAR_HOURS * 3600
+    except OSError:
+        return False
+
+
+def car_text(line, details):
+    """The summary and its details as sentences you can follow by ear: "Fixed login. Did: …. Result: …." """
+    parts = []
+    for p in [line or '', *details]:
+        t = speakable(p)
+        if re.fullmatch(r'\w+( you)?:?', t):   # a label whose content was all paths or hashes says nothing
+            continue
+        t = t.rstrip('.;: ')
+        if t:
+            parts.append(t + '.')
+    while len(' '.join(parts)) > CAR_MAX and len(parts) > 1:   # "Next" goes first, then from the end
+        parts.pop(next((i for i, x in enumerate(parts) if x.startswith('Next:')), len(parts) - 1))
+    return ' '.join(parts)
 
 
 def doing(activity):
@@ -182,7 +208,8 @@ class Hub:
                 del self.pending[sid]
                 repo = s.get('repo') or 'A session'
                 # only the model's line is read aloud; the raw first line of a reply is for the screen
-                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {speakable(line)}'.strip(), s, details=s.get('details', []) if fresh else [])
+                self.emit('done', f'{repo} is done\n{s.get("said") or s.get("prompt") or ""}'.strip(), f'{repo} is done. {car_text(line, s.get("details", [])) if fresh and car_on() else speakable(line)}'.strip(),
+                          s, details=s.get('details', []) if fresh else [])
         self.read_says(sessions)
 
     def read_says(self, sessions):
