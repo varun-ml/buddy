@@ -162,6 +162,7 @@ class BuddyService : Service() {
                     main.post { online = true; changed() }
                     wait = 1000
                     refresh()
+                    if (prefs.car) sendCar()   // tapped before the laptop was reachable (hotspot still starting): tell it now
                     while (running) {
                         val line = r.readLine() ?: break
                         when {
@@ -193,6 +194,9 @@ class BuddyService : Service() {
             .map { it.getLong("id") }.toSet()
         for (e in events) handle(e, speak = e.getLong("id") in say)
     }
+
+    /** Tell the Mac car mode is on or off. It says so on the phone when that changes, which also tells you the laptop is connected. */
+    fun sendCar() = thread { try { prefs.get("/car?on=" + if (prefs.car) "1" else "0") } catch (_: Exception) {} }
 
     fun refresh() = thread {
         try {

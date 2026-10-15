@@ -256,7 +256,7 @@ class Hub:
             head = 'All clear'
         mood = 'waiting' if waiting or stuck else 'busy' if working else 'calm'
         apk = APK if os.path.exists(APK) else None
-        return dict(headline=head, mood=mood, badge=len(waiting) + len(stuck), at=now, apk=int(os.path.getmtime(apk)) if apk else 0,
+        return dict(headline=head, mood=mood, badge=len(waiting) + len(stuck), at=now, car=car_on(), apk=int(os.path.getmtime(apk)) if apk else 0,
                     waiting=[row(s) for s in waiting],
                     stuck=[row(s) for s in stuck], working=[row(s) for s in working], yourTurn=[row(s) for s in done])
 
@@ -272,6 +272,19 @@ class Hub:
 
 
 hub = None
+
+
+def set_car(on):
+    """Car mode on (for 12 hours) or off, from the phone. Says so on the phone only when it changes."""
+    flag, was = os.path.join(PHONE, 'car'), car_on()
+    if on:
+        open(flag, 'w').close()
+    elif os.path.exists(flag):
+        os.remove(flag)
+    if on != was:
+        line = 'Car mode on. I will read the details of each finished session.' if on else 'Car mode off. Short lines again.'
+        hub.emit('say', 'Buddy: ' + line, line, None)
+    return {'car': on}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -297,6 +310,8 @@ class Handler(BaseHTTPRequestHandler):
         after = int((q.get('after') or [self.headers.get('Last-Event-ID') or 0])[0] or 0)
         if u.path == '/card':
             return self.send(200, hub.card())
+        if u.path == '/car':   # the app's Car button; it repeats it on every reconnect, so only a change is announced
+            return self.send(200, set_car(q.get('on') == ['1']))
         if u.path == '/inbox':
             with hub.cv:
                 return self.send(200, [e for e in hub.events if e['id'] > after])

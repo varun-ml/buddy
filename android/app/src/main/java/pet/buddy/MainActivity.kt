@@ -345,6 +345,27 @@ class MainActivity : Activity() {
         openClaude()
     }
 
+    /** Car mode: read the details aloud, even in quiet hours. Turning it on asks for the hotspot, so the laptop can reach the phone. */
+    private fun car() {
+        prefs.carUntil = if (prefs.car) 0 else System.currentTimeMillis() + 12 * 3600_000L
+        if (svc != null) svc!!.sendCar() else thread { try { prefs.get("/car?on=" + if (prefs.car) "1" else "0") } catch (_: Exception) {} }
+        if (prefs.car) {
+            svc?.speakNow("Car mode on. Turn on your hotspot, so the laptop stays connected.")
+            Toast.makeText(this, "Turn on Hotspot. Buddy says \"Car mode on\" once the laptop is connected.", Toast.LENGTH_LONG).show()
+            openHotspot()
+        }
+        render()
+    }
+
+    /** The hotspot page; Android lets no app switch the hotspot itself. */
+    private fun openHotspot() {
+        val tries = listOf(
+            Intent().setClassName("com.android.settings", "com.android.settings.Settings\$TetherSettingsActivity"),
+            Intent().setClassName("com.android.settings", "com.android.settings.TetherSettings"),
+            Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS))
+        for (i in tries) try { startActivity(i); return } catch (_: Exception) {}
+    }
+
     private fun openClaude() {
         val i = packageManager.getLaunchIntentForPackage("com.anthropic.claude")
         if (i == null) Toast.makeText(this, "Install the Claude app to answer from your phone", Toast.LENGTH_SHORT).show() else startActivity(i)
@@ -359,6 +380,7 @@ class MainActivity : Activity() {
             setOnClickListener { f() }
         }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
         item(if (prefs.muted) "🔔" else "🔕", if (prefs.muted) "Unmute" else "Mute 1 h", C.ink) { mute() }
+        item("🚗", if (prefs.car) "Car on" else "Car", if (prefs.car) C.accent else C.ink) { car() }
         item("✳", "Open Claude", C.orange) { openClaude() }
         item("⚙", "Settings", C.ink) { settings() }
     }
@@ -509,6 +531,7 @@ class MainActivity : Activity() {
                 line("Answer", "In the Claude app (Remote Control). Codex: at the Mac."),
                 line("More", "Tap the speech bubble to hear the details. Tap a row to read them."),
                 line("Quiet", "Mute 1 h, or quiet hours in Settings. Notifications stay."),
+                line("Car", "Reads each session's details too, even in quiet hours, for 12 h. It opens Hotspot: turn it on so the laptop can reach you."),
                 line("Offline", "Grey buddy. Back online, it reads the 3 newest; all are in Today."),
                 line("Re-pair", "On the Mac: right-click Buddy → Pair phone…, then scan."),
             ))

@@ -21,13 +21,17 @@ class Prefs(c: Context) {
     var rate: Float get() = p.getFloat("rate", 1.0f); set(v) = p.edit().putFloat("rate", v).apply()
     var bx: Int get() = p.getInt("bx", 0); set(v) = p.edit().putInt("bx", v).apply()
     var by: Int get() = p.getInt("by", 400); set(v) = p.edit().putInt("by", v).apply()
+    var carUntil: Long get() = p.getLong("carUntil", 0); set(v) = p.edit().putLong("carUntil", v).apply()
 
     val paired get() = url.isNotEmpty() && token.isNotEmpty()
     val muted get() = System.currentTimeMillis() < mutedUntil
+    /** Car mode: the Mac reads details aloud, and quiet hours don't apply. Off by itself after 12 hours, like on the Mac. */
+    val car get() = System.currentTimeMillis() < carUntil
 
-    /** Muted, or inside quiet hours (default 22:00–07:00): nothing is spoken and nothing makes a sound. */
+    /** Muted, or inside quiet hours (default 22:00–07:00) and not in car mode: nothing is spoken and nothing makes a sound. */
     fun quiet(): Boolean {
         if (muted) return true
+        if (car) return false   // driving at night: you asked to hear it
         val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
         return if (quietFrom > quietTo) h >= quietFrom || h < quietTo else h in quietFrom until quietTo
     }

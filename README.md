@@ -150,7 +150,7 @@ Away from the desk, Buddy follows you to your phone. A small Android app shows t
 - **Nothing leaves your network.** The Mac talks to the phone over [Tailscale](https://tailscale.com) only, with a token. No cloud relay and no push service.
 - **The line it reads is written by the hook, not by Buddy.** When a session ends a turn and the phone is connected, `beat.py` asks a small model (Claude Haiku, through your own `claude` CLI) to turn the reply into one sentence without code or paths. With no phone connected, nothing runs and nothing is spent.
 - **It works with the screen off and Maps open.** Maps gets quieter while Buddy talks.
-- **Car mode reads more.** `buddy car on` adds each finished session's details to what it reads (did, result, needs you), for 12 hours or until `buddy car off`.
+- **Car mode reads more.** Tap **🚗 Car** in the app (or run `buddy car on`): it adds each finished session's details to what it reads (did, result, needs you), even in quiet hours, for 12 hours or until you tap it off. Tapping it opens Hotspot: turn that on and the laptop joins it (save the hotspot once on the Mac with Auto-join). Buddy says "Car mode on" once the laptop is reachable.
 - **A login that doesn't expire on you.** The summary uses your `claude` login. If that lapses, Buddy tells you once. For a login only Buddy uses that lasts a year, run `claude setup-token` and save what it prints: `pbpaste > ~/.config/buddy/claude-token && chmod 600 ~/.config/buddy/claude-token`.
 
 To set it up:

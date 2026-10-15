@@ -87,6 +87,13 @@ try:
     assert e['spoken'] == 'myrepo is done. Fixed the login test, and all tests pass. Did: fixed the login test. Result: all tests pass.', e
     subprocess.run([os.path.join(HERE, 'buddy-cli'), 'car', 'off'], env=env, check=True, capture_output=True)
     assert not os.path.exists(os.path.join(env['BUDDY_PHONE'], 'car'))
+    # the app's Car button: on announces once (it repeats on every reconnect), off announces, the card says which
+    n = sum(e['kind'] == 'say' for e in got)
+    assert get('/car?on=1')[1] == {'car': True} and get('/car?on=1')[1] == {'car': True} and get('/card')[1]['car'] is True
+    assert 'Car mode on' in wait_for('say', n + 1)['spoken']
+    assert get('/car?on=0')[1] == {'car': False} and get('/card')[1]['car'] is False
+    assert 'Car mode off' in wait_for('say', n + 2)['spoken']
+    time.sleep(0.5); assert sum(e['kind'] == 'say' for e in got) == n + 2, got[-3:]
 
     # an offline phone catches up from the inbox, in order, nothing twice
     inbox = get('/inbox?after=0')[1]
