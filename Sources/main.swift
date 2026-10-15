@@ -133,7 +133,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-\(tab).png"))
         }
     } } }
-    // a busy day (25 finished sessions) must not crowd the quote off the card: the done list stays a few lines tall
+    // a busy day (25 finished sessions, 10 names) stays 10 short rows: repeats fold, so the card keeps its shape
     var crowdFailed = false
     MainActor.assumeIsolated {
         let base = m.sessions
@@ -153,7 +153,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             print("\(th): busy card \(Int(h1)) pt, squeezed \(Int(h4)) pt")
             m.tight = 0
             if h1 - h4 < 250 { print("SQUEEZED CARD STILL TOO TALL in \(th): dropping blocks saves only \(Int(h1 - h4)) pt"); crowdFailed = true }
-            if h1 - h0 > 90 { print("DONE LIST TOO TALL in \(th): 25 finished sessions add \(Int(h1 - h0)) pt, and the quote would be dropped"); crowdFailed = true }
+            if h1 - h0 > 240 { print("DONE LIST TOO TALL in \(th): 25 finished sessions in 10 names add \(Int(h1 - h0)) pt; repeats must fold into one row"); crowdFailed = true }
         }
         m.sessions = base
     }
