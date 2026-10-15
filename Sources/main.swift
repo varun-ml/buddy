@@ -146,6 +146,13 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             m.sessions = base + crowd; let h1 = height()
             let r = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light)); r.scale = 2
             if let t = r.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-busy.png")) }
+            // too little room: the card drops usage, team, quote and tiles (never sessions) instead of scrolling
+            m.tight = 4; let h4 = height()
+            let r4 = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light)); r4.scale = 2
+            if let t = r4.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-squeezed.png")) }
+            print("\(th): busy card \(Int(h1)) pt, squeezed \(Int(h4)) pt")
+            m.tight = 0
+            if h1 - h4 < 250 { print("SQUEEZED CARD STILL TOO TALL in \(th): dropping blocks saves only \(Int(h1 - h4)) pt"); crowdFailed = true }
             if h1 - h0 > 90 { print("DONE LIST TOO TALL in \(th): 25 finished sessions add \(Int(h1 - h0)) pt, and the quote would be dropped"); crowdFailed = true }
         }
         m.sessions = base

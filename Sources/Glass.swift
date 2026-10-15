@@ -184,13 +184,15 @@ struct GlassCard: View {
                 }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(w) } }.contextMenu { Button("Ignore this session") { m.ignore(w) } }
             }
             ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.55))) }
-            HStack(spacing: 8) {
-                if !statsRepos.isEmpty {
-                    num("\(s.merged)", "merged", s.gain)
-                    num("\(s.opened)", "opened", nil)
+            if m.tight < 4 {
+                HStack(spacing: 8) {
+                    if !statsRepos.isEmpty {
+                        num("\(s.merged)", "merged", s.gain)
+                        num("\(s.opened)", "opened", nil)
+                    }
+                    num(hm(m.workedToday), "worked", nil)
+                    num(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
                 }
-                num(hm(m.workedToday), "worked", nil)
-                num(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
             }
             if !pots.isEmpty || !m.stuck.isEmpty {
                 VStack(spacing: 0) {
@@ -220,7 +222,7 @@ struct GlassCard: View {
                     DoneChips(m: m, pots: pots, sub: gSub).padding(.horizontal, 6).padding(.vertical, 4)
                 }.padding(.vertical, 6).padding(.horizontal, 8).background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55)))
             }
-            if !s.team.isEmpty {
+            if !s.team.isEmpty && m.tight < 2 {
                 plat(10) {
                     HStack(alignment: .top, spacing: 6) {
                         ForEach(s.podium, id: \.medal) { r in
@@ -240,7 +242,7 @@ struct GlassCard: View {
                     }
                 }.help("PRs merged by the team: \(s.teamTotal) in all")
             }
-            if !m.limits.isEmpty {
+            if !m.limits.isEmpty && m.tight < 1 {
                 plat {
                     VStack(alignment: .leading, spacing: 8) {
                         lab("Usage")

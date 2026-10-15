@@ -243,7 +243,7 @@ struct Carousel: View {
 
     var body: some View {
         let items = m.history
-        if !m.tight, let b = items.isEmpty ? nil : items[min(index, items.count - 1)] {
+        if m.tight < 3, let b = items.isEmpty ? nil : items[min(index, items.count - 1)] {
             let quote = b.kind == .quote
             let (ink, sub, accent): (Color, Color, Color) = T.name == "burrow" ? (bInk, bSub, bClay) : T.name == "glass" ? (gInk, gSub, gBlue) : (kInk, kSub, kIndigo)
             VStack(alignment: .leading, spacing: 7) {

@@ -50,7 +50,9 @@ final class Model: ObservableObject {
     @Published var facingLeft = true
     @Published var leftSide = false
     @Published var cardHeight: CGFloat = 0   // the card's full height, so the window can fit all of it
-    @Published var tight = false   // the card would overflow the screen: drop the quote first, never scroll
+    /// The card would overflow the screen, so it drops blocks, least useful first: 1 usage rings, 2 team, 3 quote, 4 stats tiles.
+    /// Sessions, the inbox and anything waiting for you always stay; the card never scrolls.
+    @Published var tight = 0
     @Published var cardWidth: CGFloat = { let w = UserDefaults.standard.double(forKey: "bit.cardWidth"); return w >= 300 ? w : 330 }() {
         didSet { UserDefaults.standard.set(Double(cardWidth), forKey: "bit.cardWidth") }
     }

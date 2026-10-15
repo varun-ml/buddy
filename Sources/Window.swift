@@ -445,8 +445,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if model.showCard && !model.squatting {
             let want = (model.cardHeight > 0 ? model.cardHeight : big.height - small.height) + small.height + 22
             let room = screen.maxY - f.minY - small.height - 22
-            if model.cardHeight > room && !model.tight { model.tight = true }                 // too tall: the quote goes
-            else if model.tight && model.cardHeight + 140 < room { model.tight = false }       // plenty of room again (140 ≈ a quote, so no flip-flop)
+            if model.cardHeight > room && model.tight < 4 { model.tight += 1 }                 // too tall: drop the next block (see Model.tight)
+            else if model.tight > 0 && model.cardHeight + 150 < room { model.tight -= 1 }      // room again (150 ≈ the biggest block, so no flip-flop)
             size = NSSize(width: max(big.width, model.cardWidth + 30), height: min(want, screen.maxY - f.minY))
             if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("room for card \(Int(screen.maxY - f.minY - small.height - 22))\n".data(using: .utf8)!) }
         }

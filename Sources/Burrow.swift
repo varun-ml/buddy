@@ -251,16 +251,18 @@ struct BurrowCard: View {
                 DoneChips(m: m, pots: pots, sub: bSub).padding(.horizontal, 6)
             }
 
-            HStack(spacing: 8) {
-                if !statsRepos.isEmpty {
-                    tile("\(s.merged)", "merged", s.gain)
-                    tile("\(s.opened)", "opened", nil)
-                }
-                tile(hm(m.workedToday), "worked", nil)
-                tile(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
-            }.padding(.top, 10)
+            if m.tight < 4 {
+                HStack(spacing: 8) {
+                    if !statsRepos.isEmpty {
+                        tile("\(s.merged)", "merged", s.gain)
+                        tile("\(s.opened)", "opened", nil)
+                    }
+                    tile(hm(m.workedToday), "worked", nil)
+                    tile(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
+                }.padding(.top, 10)
+            }
 
-            if !s.team.isEmpty {   // the team leaderboard: PRs merged
+            if !s.team.isEmpty && m.tight < 2 {   // the team leaderboard: PRs merged
                 HStack(alignment: .top, spacing: 6) {
                     ForEach(s.podium, id: \.medal) { r in
                         VStack(alignment: .leading, spacing: 1) {
@@ -282,7 +284,7 @@ struct BurrowCard: View {
                 .help("PRs merged by the team: \(s.teamTotal) in all")
             }
 
-            if !m.limits.isEmpty {
+            if !m.limits.isEmpty && m.tight < 1 {
                 VStack(spacing: 4) {
                     ForEach(m.limits) { l in
                         let c = l.used >= 95 ? hex(0xc4542b) : l.used >= 80 ? hex(0xe0a040) : bSage
