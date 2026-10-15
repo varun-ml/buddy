@@ -260,7 +260,7 @@ final class Model: ObservableObject {
 
     /// Ignore a session (✕ on an alert row, or right-click any row): hidden until it's forgotten (12 h quiet), even if it keeps posting.
     func ignore(_ s: Session) {
-        var ig = ignored.filter { Date().timeIntervalSince1970 - $0.value < forgetAfter }
+        var ig = ignored.filter { Date().timeIntervalSince1970 - $0.value < hideFor }
         ig[s.id] = Date().timeIntervalSince1970
         UserDefaults.standard.set(ig, forKey: "bit.ignored")
         loadSessions()
@@ -614,7 +614,7 @@ final class Model: ObservableObject {
             guard let data = fm.contents(atPath: p), let s = try? JSONDecoder().decode(Session.self, from: data) else { continue }
             if now - s.ts > forgetAfter { try? fm.removeItem(atPath: p); continue }
             if let c = s.cwd, !c.isEmpty, !fm.fileExists(atPath: c) { try? fm.removeItem(atPath: p); continue }   // its folder is gone (a deleted worktree): it can never finish
-            if ig[s.id] != nil { continue }
+            if let at = ig[s.id], now - at < hideFor { continue }   // ✕ or "Ignore": out of sight for 24 hours, whatever it does
             if isStuck(s), s.id.hasPrefix("codex-"), codexArchived(String(s.id.dropFirst(6))) { try? fm.removeItem(atPath: p); continue }   // archived mid-turn: no Stop ever comes
             out.append(s)
         }

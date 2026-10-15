@@ -210,6 +210,7 @@ let walkHz: Double = 15
 let stepScale = CGFloat(30 / walkHz)   // per-frame steps were tuned at 30 fps; keep the same speed on screen
 let staleAfter: Double = 15 * 60
 let forgetAfter: Double = 12 * 3600
+let hideFor: Double = 24 * 3600   // a session you hid (✕ or "Ignore this session") stays hidden this long
 var blobCenter: () -> CGPoint = { .zero }
 var mouseInPet: () -> Bool = { false }
 

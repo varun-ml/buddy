@@ -137,7 +137,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
     var crowdFailed = false
     MainActor.assumeIsolated {
         let base = m.sessions
-        let crowd = (0..<25).map { i in Session(id: "done\(i)", cwd: "/x/r\(i % 10)", repo: "repo-\(i % 10)", branch: "main", state: "finished", activity: "", prompt: "p", ts: now - Double(600 + i * 60)) }
+        let crowd = (0..<25).map { i in Session(id: "done\(i)", cwd: "/x/r\(i % 10)", repo: "repo-\(i % 10)", branch: "main", state: "finished", activity: "", prompt: "p", ts: now - Double(600 + i * 60), source: i % 10 < 3 ? "codex-cli" : nil) }
         m.tab = "work"
         for th in ["burrow", "glass", "ink"] {
             T = themes[th]!; m.themeName = th
