@@ -83,6 +83,7 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 | Pick a buddy, costume or theme | Right-click Buddy → *Look* |
 | Set goals, add a task, update your profile | Right-click Buddy → *Personal* |
 | Nap for an hour, or relax mode | Right-click Buddy |
+| Keep Buddy in one spot | Right-click → *📌 Stay in place*. It stops strolling but still does its tricks. Drag it wherever you like |
 | Make the card wider | Drag its outer edge |
 | Close Buddy | Right-click → *Close Buddy*. Type `buddy` in Terminal to bring it back |
 
@@ -188,6 +189,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |
+| `stayPut` | `true` keeps Buddy in one spot instead of strolling (default off). Same as right-click → *Stay in place*, which overrides it |
 | `claudeLimits` | Show your Claude plan usage (default off; see *What it asks permission for*) |
 | `switchesPerHour` | App switches in an hour before Buddy suggests calming down (default 120; needs switch tracking on) |
 | `sessionsPer2h` | Agent sessions touched in 2 hours before Buddy suggests finishing some (default 6; needs switch tracking on) |

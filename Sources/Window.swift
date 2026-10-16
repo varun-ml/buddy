@@ -172,6 +172,7 @@ struct PetView: View {
                 .contextMenu {
                     Button(m.breathing ? "End the break" : m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
                     Button((m.relaxing ? "✓ " : "") + "🌿 Relax mode") { m.toggleRelax() }
+                    Button((m.stayPut ? "✓ " : "") + "📌 Stay in place") { m.toggleStayPut() }
                     Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
                     if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
                     Divider()
@@ -366,7 +367,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let after = CommandLine.arguments.firstIndex(of: "--squat").flatMap { Double(CommandLine.arguments[$0 + 1]) } ?? 300
         let forced = forcedSquat
-        guard forced || idle > after, !m.expanded, !m.snoozed,
+        guard forced || idle > after, !m.expanded, !m.snoozed, !m.stayPut,
               let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier,
               let wins = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]],
               let full = NSScreen.screens.first?.frame,
@@ -407,7 +408,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         homeY = panel.frame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
         if idle && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
-        if m.zoomies {
+        if m.zoomies && !m.stayPut {
             var f = panel.frame
             if target == nil || abs((target ?? 0) - f.minX) < 8 {
                 target = f.midX < screen.midX ? screen.maxX - small.width - 10 : screen.minX + 10
@@ -420,7 +421,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let quiet = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
-        let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet)
+        let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet, stayPut: m.stayPut)
         guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
         var f = panel.frame
         if target == nil {
@@ -456,12 +457,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 /// Always on the move while you're at the desk. Stands still only under your cursor, with the card open, napping,
-/// or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
+/// told to stay in place, or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
 /// At least half of Buddy is inside one screen's usable area. A sliver peeking out below the menu bar does not count.
 func mostlyVisible(_ f: NSRect, on screens: [NSRect]) -> Bool {
     screens.contains { let i = $0.intersection(f); return i.width >= f.width / 2 && i.height >= f.height / 2 }
 }
 
-func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double) -> Bool {
-    !expanded && !hovering && !snoozed && idle <= 120
+func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double, stayPut: Bool = false) -> Bool {
+    !expanded && !hovering && !snoozed && !stayPut && idle <= 120
 }

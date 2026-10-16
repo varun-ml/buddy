@@ -67,6 +67,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 5))
     precondition(!shouldWalk(expanded: true, hovering: false, snoozed: false, idle: 5) && !shouldWalk(expanded: false, hovering: true, snoozed: false, idle: 5))
     precondition(!shouldWalk(expanded: false, hovering: false, snoozed: true, idle: 5) && !shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 121))
+    precondition(!shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 5, stayPut: true))   // "Stay in place" means it
     precondition(Model().mood != .asleep)   // no sessions open is not a nap
     // The "Merged!" bubble and the card disagreed (two counts); now the card's number is the only one.
     let mc = Model(); mc.statsLoaded = true; var ms = Stats(); ms.merged = 3; mc.applyStats(ms); precondition(mc.mergedToday == 3 && mc.stats.merged == 3)
