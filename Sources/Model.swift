@@ -30,6 +30,9 @@ final class Model: ObservableObject {
     @Published var tasks = loadTasks()          // open "- [ ]" lines in ~/.config/buddy/tasks.md
     @Published var tab = "work"                 // card tab: work | personal
     @Published var themeName = T.name
+    /// Where Buddy strolls: "bottom" (along the bottom of the screen) or "side" (up and down the nearer side edge).
+    /// Right-click → Look → Walk, or buddy.json "walk": "side". The menu's choice wins.
+    @Published var walk = UserDefaults.standard.string(forKey: "bit.walk") ?? config["walk"] as? String ?? "bottom"
     @Published var bubble: Bubble?
     @Published var showCard = false
     @Published var showStale = false

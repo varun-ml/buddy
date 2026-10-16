@@ -81,6 +81,7 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 | Jump to an agent | Click its row or its bubble |
 | See a bubble you missed | Hover over Buddy: the **Inbox** at the top of Work keeps today's last 100 events. "Wants your OK" and red-PR bubbles stay up until they're handled |
 | Pick a buddy, costume or theme | Right-click Buddy → *Look* |
+| Have Buddy walk up and down the side of the screen | Right-click → *Look* → *Walk* → *Up and down the side* |
 | Set goals, add a task, update your profile | Right-click Buddy → *Personal* |
 | Nap for an hour, or relax mode | Right-click Buddy |
 | Make the card wider | Drag its outer edge |
@@ -185,6 +186,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `skipBuddies` | Buddies that `random` and Shuffle never pick, e.g. `["robot"]` |
 | `costume` | `hero`, `durga`, `diwali`, `off` (never), or leave it out to dress up for festivals on its own. Cat, pug and bear only. |
 | `outfit` | `none` takes off the pug's tracksuit and shades |
+| `walk` | `bottom` (default) strolls along the bottom of the screen; `side` walks up and down the nearer side edge. Right-click → *Look* → *Walk* overrides it |
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |

@@ -260,6 +260,11 @@ extension Model {
         return out.sorted { $0.0 < $1.0 }.prefix(3).map(\.1)
     }
 
+    func setWalk(_ name: String) {
+        UserDefaults.standard.set(name, forKey: "bit.walk")
+        walk = name
+    }
+
     func setPet(_ name: String) {
         UserDefaults.standard.set(name, forKey: "bit.pet")
         petChoice = name; randomDay.at = .distantPast

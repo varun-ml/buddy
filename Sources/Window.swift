@@ -187,6 +187,11 @@ struct PetView: View {
                                 Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
                             }
                         }
+                        Menu("Walk") {
+                            ForEach([("bottom", "Along the bottom"), ("side", "Up and down the side")], id: \.0) { w in
+                                Button((m.walk == w.0 ? "✓ " : "    ") + w.1) { m.setWalk(w.0) }
+                            }
+                        }
                         Menu("Theme") {
                             ForEach(["burrow", "glass", "ink"], id: \.self) { n in
                                 Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
@@ -244,6 +249,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let small = NSSize(width: 100, height: 108)
     let big = NSSize(width: 360, height: 660)
     var target: CGFloat?
+    var sideTarget: CGPoint?                     // the next spot up or down the side edge ("walk": "side")
     var litter: Panel!
     var flightFloor: CGFloat?                    // the hero's floor while it flies (Costume.swift)
     var heroLater: (Gesture, Date)?               // a flight that waits for a bubble or the card to close
@@ -409,6 +415,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if idle && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
         if m.zoomies {
             var f = panel.frame
+            if m.walk == "side" {   // dash to the far end of the edge and back
+                let (low, high) = sideRange(in: screen, size: small)
+                if target == nil || abs((target ?? 0) - f.minY) < 8 || !(low...high).contains(target!) {   // a target left from walking the floor is an x
+                    target = f.midY < (low + high) / 2 + small.height / 2 ? high : low
+                }
+                let dy = target! - f.minY
+                if !m.walking { m.walking = true }
+                f.origin.y += dy > 0 ? min(9 * stepScale, dy) : max(-9 * stepScale, dy)
+                panel.setFrameOrigin(f.origin)
+                return
+            }
             if target == nil || abs((target ?? 0) - f.minX) < 8 {
                 target = f.midX < screen.midX ? screen.maxX - small.width - 10 : screen.minX + 10
             }
@@ -421,8 +438,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let quiet = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
         let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet)
-        guard canWalk else { if m.walking { m.walking = false }; target = nil; return }
+        guard canWalk else { if m.walking { m.walking = false }; target = nil; sideTarget = nil; return }
         var f = panel.frame
+        let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
+        if m.walk == "side" {
+            if sideTarget == nil { sideTarget = strollTarget(side: true, from: f, in: screen, size: small, roll: .random(in: 0...1)) }
+            let t = sideTarget!, dx = t.x - f.minX, dy = t.y - f.minY, d = hypot(dx, dy)
+            if d < 2 { sideTarget = nil; return }
+            if !m.walking { m.walking = true }
+            let facing = abs(dx) >= 2 ? dx < 0 : f.midX > screen.midX   // on the edge: face into the screen
+            if m.facingLeft != facing { m.facingLeft = facing }
+            let k = min(1, pace * stepScale / d)
+            f.origin.x += dx * k; f.origin.y += dy * k
+            if m.relaxing && Int.random(in: 0..<300) == 0 { m.leaves += 1 }
+            panel.setFrameOrigin(f.origin)
+            return
+        }
         if target == nil {
             target = CGFloat.random(in: (screen.minX + 10)...(screen.maxX - small.width - 10))
         }
@@ -431,7 +462,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if abs(dx) < 2 { target = nil; return }   // straight on to the next spot, no standing around
         if !m.walking { m.walking = true }
         if m.facingLeft != (dx < 0) { m.facingLeft = dx < 0 }
-        let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
         if m.relaxing && Int.random(in: 0..<300) == 0 { m.leaves += 1 }   // ~every 20 s of walking, a leaf drifts past
         f.origin.x += dx > 0 ? min(pace * stepScale, dx) : max(-pace * stepScale, dx)
         panel.setFrameOrigin(f.origin)
@@ -453,6 +483,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let x = model.leftSide ? f.minX : f.maxX - size.width
         panel.setFrame(NSRect(x: x, y: f.minY, width: size.width, height: size.height), display: true, animate: false)
     }
+}
+
+/// How high up the side edge Buddy strolls: from just above the bottom to low enough that the card,
+/// which opens above Buddy, still has room for its main blocks.
+func sideRange(in s: NSRect, size: NSSize) -> (low: CGFloat, high: CGFloat) {
+    let low = s.minY + 10
+    return (low, max(low, s.maxY - size.height - 360))
+}
+
+/// Where to stroll next, `roll` in 0…1. Along the bottom: anywhere across, at the current height.
+/// Up and down the side: on the nearer side edge, anywhere in `sideRange`. Selftested.
+func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, roll: CGFloat) -> CGPoint {
+    guard side else { return CGPoint(x: s.minX + 10 + roll * (s.width - size.width - 20), y: f.minY) }
+    let (low, high) = sideRange(in: s, size: size)
+    return CGPoint(x: f.midX < s.midX ? s.minX + 10 : s.maxX - size.width - 10, y: low + roll * (high - low))
 }
 
 /// Always on the move while you're at the desk. Stands still only under your cursor, with the card open, napping,

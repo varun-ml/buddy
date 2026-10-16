@@ -68,6 +68,16 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(!shouldWalk(expanded: true, hovering: false, snoozed: false, idle: 5) && !shouldWalk(expanded: false, hovering: true, snoozed: false, idle: 5))
     precondition(!shouldWalk(expanded: false, hovering: false, snoozed: true, idle: 5) && !shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 121))
     precondition(Model().mood != .asleep)   // no sessions open is not a nap
+    do {   // "walk": "side" keeps to the nearer side edge, never so high the card can't open above it
+        let scr = NSRect(x: 0, y: 25, width: 1440, height: 875), sz = NSSize(width: 100, height: 108)
+        for roll: CGFloat in [0, 0.5, 1] {
+            let r = strollTarget(side: true, from: NSRect(x: 1300, y: 40, width: 100, height: 108), in: scr, size: sz, roll: roll)
+            let l = strollTarget(side: true, from: NSRect(x: 30, y: 40, width: 100, height: 108), in: scr, size: sz, roll: roll)
+            precondition(r.x == scr.maxX - sz.width - 10 && l.x == scr.minX + 10)
+            precondition(r.y >= scr.minY + 10 && r.y + sz.height + 360 <= scr.maxY)
+        }
+        precondition(strollTarget(side: false, from: NSRect(x: 30, y: 40, width: 100, height: 108), in: scr, size: sz, roll: 1).y == 40)
+    }
     // The "Merged!" bubble and the card disagreed (two counts); now the card's number is the only one.
     let mc = Model(); mc.statsLoaded = true; var ms = Stats(); ms.merged = 3; mc.applyStats(ms); precondition(mc.mergedToday == 3 && mc.stats.merged == 3)
     // One failed GitHub call blanked the tiles and the leaderboard.
