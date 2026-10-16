@@ -513,7 +513,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !model.showCard && model.cardOverlap > 0 { model.cardOverlap = 0 }
         if model.showCard && !model.squatting {
             let want = (model.cardHeight > 0 ? model.cardHeight : big.height - small.height) + small.height + 22
-            let overlap = min(max(0, want - (screen.maxY - f.minY)), small.height + 22)   // never more than the pet itself
+            let underCard: CGFloat = 6 + 20 + 72 + 8   // what sits below the card: stack spacing, the pet's top padding, the pet, the outer padding
+            let overlap = min(max(0, want - (screen.maxY - f.minY)), underCard)   // cover the pet, never push the card out of the window
             if abs(model.cardOverlap - overlap) > 1 { model.cardOverlap = overlap }
             size = NSSize(width: max(big.width, model.cardWidth + 30), height: min(want - overlap, screen.maxY - f.minY))
             if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("room for card \(Int(screen.maxY - f.minY - small.height - 22))\n".data(using: .utf8)!) }
