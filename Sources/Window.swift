@@ -183,9 +183,16 @@ struct PetView: View {
                     if h { petTimer = Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in m.hearts += 1 } }
                 }
                 .contextMenu {
-                    Button(m.breathing ? "End the break" : m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
-                    Button((m.relaxing ? "✓ " : "") + "🌿 Relax mode") { m.toggleRelax() }
-                    Button((m.stayPut ? "✓ " : "") + "📌 Stay in place") { m.toggleStayPut() }
+                    // pet actions (docs/pet-actions-prd.md): the pet's verb, then what it means
+                    Button(m.stayPut ? "🐾 Walkies · roam again" : "🪑 Sit · stay in one spot") { m.toggleStayPut() }
+                    if m.breathing || m.snoozed { Button(m.breathing ? "End the break" : "☀️ Wake up") { m.toggleSnooze() } }
+                    else { Menu("💤 Nap · quiet for a while") {
+                        Button("30 minutes") { m.nap(30) }; Button("1 hour") { m.nap(60) }; Button("Until I wake it") { m.nap(nil) }
+                    } }
+                    Menu("🏠 Den · off the screen") {
+                        Button("30 minutes") { m.goToDen(30) }; Button("1 hour") { m.goToDen(60) }; Button("2 hours") { m.goToDen(120) }
+                    }
+                    Button((m.relaxing ? "✓ " : "") + "🌿 Lazy day · calm until midnight") { m.toggleRelax() }
                     Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
                     if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
                     Divider()
@@ -410,10 +417,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     var tick = 0
+    var denShownAt: Date?   // when Buddy said where it was going, so the line shows a moment before it leaves
+
     func wander() {
         let m = model
         // walkHz while moving; ~2 Hz otherwise
         tick += 1
+        // the den: say where it's going, fade out, stay hidden; back on screen when the time is up or `buddy back`
+        if m.inDen {
+            if denShownAt == nil { denShownAt = Date() }
+            if panel.isVisible && panel.alphaValue > 0.99 && Date().timeIntervalSince(denShownAt!) > 3 {
+                NSAnimationContext.runAnimationGroup({ $0.duration = 0.6; panel.animator().alphaValue = 0 }) { [weak self] in
+                    if self?.model.inDen == true { self?.panel.orderOut(nil) }
+                }
+            }
+            return
+        }
+        if denShownAt != nil || !panel.isVisible { denShownAt = nil; panel.alphaValue = 1; panel.orderFrontRegardless() }
         if heroFlight() { return }
         let moving = m.walking || m.zoomies || target != nil
         if !moving && tick % 8 != 0 { return }
@@ -426,7 +446,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         homeY = panel.frame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
-        if idle && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
+        if idle && !m.stayPut && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
         if m.zoomies && !m.stayPut {
             var f = panel.frame
             if m.walk == "side" {   // dash to the far end of the edge and back

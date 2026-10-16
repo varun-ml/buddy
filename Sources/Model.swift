@@ -37,7 +37,11 @@ final class Model: ObservableObject {
     @Published var showCard = false
     @Published var showStale = false
     @Published var prsCheckedAt: Date?
-    @Published var snoozedUntil: Date?
+    /// Nap: quiet and still until this time. Saved, so a restart doesn't wake it (Phone.swift's throwaway Model sets it without saving).
+    @Published var snoozedUntil: Date? = (UserDefaults.standard.object(forKey: "bit.nap") as? Date).flatMap { $0 > Date() ? $0 : nil }
+    /// Den: off the screen until this time (at most 2 h). Saved for the same reason: a crash mid-demo must not bring Buddy back.
+    @Published var denUntil: Date? = (UserDefaults.standard.object(forKey: "bit.den") as? Date).flatMap { $0 > Date() ? $0 : nil }
+    var inDen: Bool { (denUntil ?? .distantPast) > Date() }
     @Published var shake = 0
     @Published var celebrate = 0
     @Published var hearts = 0
@@ -293,7 +297,8 @@ final class Model: ObservableObject {
     }
 
     var headline: String {
-        if snoozed { return "Napping till \(DateFormatter.localizedString(from: snoozedUntil!, dateStyle: .none, timeStyle: .short))" }
+        if inDen { return "In my den till \(DateFormatter.localizedString(from: denUntil!, dateStyle: .none, timeStyle: .short))" }
+        if snoozed { return snoozedUntil! > Date().addingTimeInterval(86400) ? "Napping" : "Napping till \(DateFormatter.localizedString(from: snoozedUntil!, dateStyle: .none, timeStyle: .short))" }
         if let s = waiting.first { return "\(s.repo ?? "A session") is waiting for your OK" }
         if needsYouPRs.count == 1 { return "1 PR needs a fix" }
         if needsYouPRs.count > 1 { return "\(needsYouPRs.count) PRs need a fix" }
@@ -313,15 +318,16 @@ final class Model: ObservableObject {
         // privacy mode (screen sharing): events say only what kind of thing happened; chatter that names people or work stays quiet
         if privacy && (kind == .ambient || kind == .thought) { return }
         let text = privacy && kind == .event ? privateText(tone) : text
-        let napping = snoozed && tone != .happy
-        if (napping || squatting) && kind != .event { return }
+        // a nap or the den holds every bubble, good news too (no dance); on a call (mic in use), no sounds or chatter
+        let napping = snoozed || inDen, onCall = micInUse()
+        if (napping || squatting || onCall) && kind != .event { return }
         if !napping {
             if kind == .event && (tone == .upset || tone == .waiting) { lastEventAt = Date() }
             // a sound when something needs you: approval or limit (Glass), red PR (Basso), a session done (Pop)
             if kind == .event && tone == .happy { dance() }
             if kind == .event && tone == .upset, let g = costumeMove(.red) ?? petKind.onRed { doGesture(g) }   // the hero flies off to fix it     // a bear roars at a red PR
             if kind == .event && tone == .happy, let g = costumeMove(cue ?? .merge) ?? petKind.onMerge { doGesture(g) }   // and catches a salmon on good news
-            if let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
+            if !onCall, let name = sound ?? (kind != .event ? nil : tone == .waiting ? "Glass" : tone == .upset ? "Basso" : nil) { NSSound(named: name)?.play() }
             if showCard && tone == .happy { celebrate += 1 }
         }
         let b = Bubble(text: text, tone: tone, kind: kind, byline: byline, action: action, react: react, sticky: sticky, group: group)
@@ -340,7 +346,7 @@ final class Model: ObservableObject {
     /// The next waiting event, once nothing is in the way. Called every 2 s. Several finished sessions waiting at once
     /// become one bubble ("3 done: a, b, c") that opens the inbox; nothing is dropped, the inbox has each one.
     func sayNext() {
-        guard !snoozed, !showCard, bubble == nil, !waitingToSay.isEmpty else { return }
+        guard !snoozed, !inDen, !showCard, bubble == nil, !waitingToSay.isEmpty else { return }
         let w = waitingToSay.removeFirst()
         let done = w.b.group == nil ? [] : waitingToSay.filter { $0.b.group != nil }
         guard !done.isEmpty else { show(w.b, seconds: w.seconds, pose: w.pose); return }
@@ -634,6 +640,7 @@ final class Model: ObservableObject {
         }
         out.sort { $0.ts > $1.ts }
         readInbox(out)
+        petActionsTick()
         sayNext()
         for s in out {
             let prev = lastStates[s.id]
@@ -779,17 +786,56 @@ final class Model: ObservableObject {
         if privacy { showCard = false; onExpandChange?() }
     }
 
+    /// Sit: stay in one spot, no tricks. "Walkies" lets it roam again.
     func toggleStayPut() {
         stayPut.toggle()
         UserDefaults.standard.set(stayPut, forKey: "bit.stayPut")
-        say(stayPut ? "Staying right here 📌 Drag me if you want me somewhere else." : "Off for a stroll again 🐾", .calm, seconds: 4, kind: .ambient)
+        say(stayPut ? "Sitting. I'll stay right here." : "Walkies! 🐾", .calm, seconds: 4, kind: .ambient)
+    }
+
+    /// Nap for some minutes (nil: until you wake it), or wake up. Events wait in the queue and show, needs-you first, on waking.
+    func nap(_ minutes: Int?) {
+        if breathing { endBreak(quiet: true); return }
+        snoozedUntil = minutes.map { Date().addingTimeInterval(Double($0) * 60) } ?? .distantFuture
+        UserDefaults.standard.set(snoozedUntil, forKey: "bit.nap")
+        bubble = nil
+        onExpandChange?()
     }
 
     func toggleSnooze() {
         if breathing { endBreak(quiet: true); return }
-        snoozedUntil = snoozed ? nil : Date().addingTimeInterval(3600)
-        if snoozed { bubble = nil }
+        if snoozed { snoozedUntil = nil; UserDefaults.standard.removeObject(forKey: "bit.nap"); say("I'm up 🐾", .calm, seconds: 3, kind: .ambient) }
+        else { nap(60) }
         onExpandChange?()
+    }
+
+    /// Den: off the screen for some minutes. The window hides (Window.wander), every event waits, and the phone still speaks.
+    func goToDen(_ minutes: Int) {
+        showCard = false; bubble = nil
+        let h = minutes >= 60 ? "\(minutes / 60) hour\(minutes >= 120 ? "s" : "")" : "\(minutes) minutes"
+        say("Off to \(petKind.den) for \(h). Your phone has me.", .calm, seconds: 4, kind: .ambient)   // before the den holds bubbles
+        denUntil = Date().addingTimeInterval(Double(min(minutes, 120)) * 60)
+        UserDefaults.standard.set(denUntil, forKey: "bit.den")
+        try? FileManager.default.removeItem(atPath: (doneDir as NSString).appendingPathComponent("den"))
+        onExpandChange?()
+    }
+
+    /// Back from the den: by time, or `buddy back` (it drops a "den" file in the done folder).
+    func leaveDen() {
+        denUntil = nil
+        UserDefaults.standard.removeObject(forKey: "bit.den")
+        let n = waitingToSay.count   // the held events show next, needs-you first
+        say("Back from \(petKind.den) 🐾" + (n > 0 ? "\n\(n) thing\(n == 1 ? "" : "s") happened while I was away." : ""), .calm, seconds: 5, kind: .ambient)
+        onExpandChange?()
+    }
+
+    /// Every 2 s: end a nap or den whose time is up, and answer `buddy back`.
+    func petActionsTick() {
+        if let d = denUntil {
+            let back = (doneDir as NSString).appendingPathComponent("den")
+            if d <= Date() || FileManager.default.fileExists(atPath: back) { try? FileManager.default.removeItem(atPath: back); leaveDen() }
+        }
+        if let n = snoozedUntil, n <= Date(), breakUntil == nil { snoozedUntil = nil; UserDefaults.standard.removeObject(forKey: "bit.nap") }
     }
 }
 

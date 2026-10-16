@@ -62,6 +62,14 @@ struct PetKind {
     let sceneEars: (inout GraphicsContext, _ fur: Color, _ dark: Color) -> Void   // the pet in Burrow's scene
 }
 
+/// Where each buddy goes when you send it to its den: "Off to my box for an hour." A new buddy gets "my den" until it has its own.
+extension PetKind {
+    var den: String {
+        ["cat": "my box", "pug": "my kennel", "bear": "my cave", "hero": "patrol", "ninja": "the dojo", "wizard": "my tower",
+         "astronaut": "the ship", "robot": "my charging dock", "stitch": "the sea", "chemist": "the lab"][name] ?? "my den"
+    }
+}
+
 let pets = [catPet, pugPet, bearPet, heroBuddy, ninjaBuddy, wizardBuddy, astronautBuddy, robotBuddy, stitchBuddy, chemistBuddy]
 var petKind: PetKind { pets.first { $0.name == pet } ?? catPet }
 var breeds: [Breed] { petKind.coats }
@@ -223,8 +231,8 @@ struct Cat: View {
                 .offset(y: hm.y + (gliding ? -10 + sin(s * 3) * 2 : 0) + (wearing == "durga" && m.walking ? pandalHop(s) : 0))
                 .scaleEffect(x: m.facingLeft ? -1 : 1, y: 1)
                 accessory(s: s).frame(width: 84, height: 20).offset(y: -22)
-                if m.badge > 0 && !m.snoozed && !drawingForPhone {   // the phone draws its own, live badge
-                    Text("\(m.badge)").font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.white)
+                if m.badge > 0 && !drawingForPhone {   // the phone draws its own, live badge; napping, just a quiet "!"
+                    Text(m.snoozed ? "!" : "\(m.badge)").font(.system(size: 10, weight: .bold, design: .rounded)).foregroundColor(.white)
                         .frame(minWidth: 16, minHeight: 16).background(Circle().fill(Color.red))
                         .offset(x: 2, y: -2)
                 }

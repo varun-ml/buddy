@@ -9,7 +9,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--focus"), i + 2 < CommandLine.
 if CommandLine.arguments.contains("--selftest") {   // the date and time parsing behind birthdays and bedtimes
     // Your own settings (relax, privacy, ignored sessions…) must not change the answers: the argument domain wins over them,
     // in memory only, so nothing you saved is touched.
-    UserDefaults.standard.setVolatileDomain(["bit.relax": Date.distantPast, "bit.privacy": false, "bit.switchTracking": false,
+    UserDefaults.standard.setVolatileDomain(["bit.relax": Date.distantPast, "bit.nap": Date.distantPast, "bit.den": Date.distantPast, "bit.privacy": false, "bit.switchTracking": false,
                                              "bit.ignored": [String: Double](), "bit.breed": 0], forName: UserDefaults.argumentDomain)
     precondition(dayMonth("14 Feb") == "14 Feb" && dayMonth("Feb 14") == "14 Feb" && dayMonth("14/02") == "14 Feb" && dayMonth("2019-02-14") == "14 Feb" && dayMonth("June 3") == "3 Jun")
     precondition(dayMonth("banana") == nil)
@@ -54,6 +54,14 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     q.bubble = nil; q.snoozedUntil = Date().addingTimeInterval(60); q.sayNext(); precondition(q.bubble == nil)
     q.snoozedUntil = nil; q.sayNext(); precondition(q.bubble?.text == "selftest b")
     q.bubble = nil; q.sayNext(); precondition(q.bubble == nil)
+    // pet actions: a nap holds good news too (no bubble, no dance); the den holds everything; both let it out afterwards
+    let pa = Model(); pa.snoozedUntil = Date().addingTimeInterval(60)
+    pa.say("a is done", .happy, group: "a"); precondition(pa.bubble == nil)
+    pa.snoozedUntil = nil; pa.sayNext(); precondition(pa.bubble?.text == "a is done")
+    pa.bubble = nil; pa.denUntil = Date().addingTimeInterval(60); pa.say("b wants your OK", .waiting); pa.sayNext(); precondition(pa.bubble == nil && pa.inDen)
+    pa.denUntil = Date().addingTimeInterval(-1); pa.petActionsTick(); precondition(!pa.inDen && pa.bubble?.text.hasPrefix("Back from") == true)
+    pa.bubble = nil; pa.sayNext(); precondition(pa.bubble?.text == "b wants your OK")
+    precondition(pets.allSatisfy { $0.den != "my den" } && Set(pets.map(\.den)).count == pets.count)   // every buddy has its own den
     var good = Stats(); good.me = "me"; good.merged = 4; good.team = [("ana", 9)]; good.teamTotal = 12   // a failed GitHub call keeps the last good numbers
     let kept = keepGood(Stats(), old: good, okMe: false, okTeam: false)
     precondition(kept.merged == 4 && kept.teamTotal == 12 && kept.team.count == 1 && keepGood(Stats(), old: good, okMe: true, okTeam: true).teamTotal == 0)

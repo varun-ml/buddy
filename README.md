@@ -69,9 +69,9 @@ Right-click Buddy → **Look** → **Costume** dresses the cat, pug or bear (the
 - **Pujo** and **Diwali** switch on by themselves from a week before the festival days to three days after. Pujo: a red-bordered drape and kash flowers; it plays the dhak when an agent finishes and does a dhunuchi dance when you merge. Diwali: a kurta and marigold garland; it lights diyas, waves a phuljhari, and carries a diya after dark.
 - Pick a costume yourself, or *No costume, ever*, and it won't dress up on its own.
 
-## Relax mode
+## Lazy day
 
-Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slower with leaves drifting past, takes sleepy little stretches and naps, and swaps work chatter (merge counts, the leaderboard) for calm quotes. Every 2 hours a soft chime offers a break: tap the bubble, or right-click → *Breathe for 2 minutes*, and Buddy naps inside a ring that grows and shrinks (4 s in, 6 s out) over soft rain-like noise it makes itself. A session waiting for your OK and a red PR still get through.
+Right-click Buddy → **🌿 Lazy day**, on until midnight. Buddy ambles slower with leaves drifting past, takes sleepy little stretches and naps, and swaps work chatter (merge counts, the leaderboard) for calm quotes. Every 2 hours a soft chime offers a break: tap the bubble, or right-click → *Breathe for 2 minutes*, and Buddy naps inside a ring that grows and shrinks (4 s in, 6 s out) over soft rain-like noise it makes itself. A session waiting for your OK and a red PR still get through.
 
 ## Everyday use
 
@@ -83,8 +83,8 @@ Right-click Buddy → **🌿 Relax mode**, on until midnight. Buddy ambles slowe
 | Pick a buddy, costume or theme | Right-click Buddy → *Look* |
 | Have Buddy walk up and down the side of the screen | Right-click → *Look* → *Walk* → *Up and down the side* |
 | Set goals, add a task, update your profile | Right-click Buddy → *Personal* |
-| Nap for an hour, or relax mode | Right-click Buddy |
-| Keep Buddy in one spot | Right-click → *📌 Stay in place*. It stops strolling but still does its tricks. Drag it wherever you like |
+| Calm Buddy down | Right-click → **🪑 Sit** (stays in one spot, no tricks; *Walkies* to roam again), **💤 Nap** (30 min, 1 hour or until you wake it: still and silent, every bubble waits, a quiet "!" if a session needs you), or **🏠 Den** (off the screen for 30 min, 1 or 2 hours: each buddy goes to its own place, a bear to its cave, the robot to its charging dock; your phone still tells you; `buddy back` calls it back early). Nap and Den survive a restart |
+| On a call | Nothing to do: while the microphone is in use, Buddy makes no sounds and keeps its chatter to itself. Sessions that need you still show |
 | Make the card wider | Drag its outer edge |
 | Close Buddy | Right-click → *Close Buddy*. Type `buddy` in Terminal to bring it back |
 
@@ -191,7 +191,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |
-| `stayPut` | `true` keeps Buddy in one spot instead of strolling (default off). Same as right-click → *Stay in place*, which overrides it |
+| `stayPut` | `true` makes Buddy sit in one spot instead of strolling (default off). Same as right-click → *Sit*, which overrides it |
 | `claudeLimits` | Show your Claude plan usage (default off; see *What it asks permission for*) |
 | `switchesPerHour` | App switches in an hour before Buddy suggests calming down (default 120; needs switch tracking on) |
 | `sessionsPer2h` | Agent sessions touched in 2 hours before Buddy suggests finishing some (default 6; needs switch tracking on) |

@@ -91,7 +91,7 @@ extension Model {
         else {
             relaxUntil = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)   // until midnight
             lastBreakNudge = Date()   // the first nudge comes 2 hours from now
-            say("Relax mode on 🌿 I'll ring a soft bell every 2 hours.", .calm, seconds: 6, kind: .ambient)
+            say("Lazy day 🌿 Calm lines only till midnight, and a soft bell every 2 hours.", .calm, seconds: 6, kind: .ambient)
         }
         UserDefaults.standard.set(relaxUntil, forKey: "bit.relax")
     }
