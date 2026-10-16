@@ -292,7 +292,7 @@ final class Model: ObservableObject {
         var h = hiddenPRs.filter { id, _ in prs.contains { $0.id == id } }   // forget PRs that closed
         h[pr.id] = pr.sha
         UserDefaults.standard.set(h, forKey: "bit.hiddenPRs")
-        objectWillChange.send(); onExpandChange?()
+        objectWillChange.send(); resolveSticky(); onExpandChange?()   // its queued or shown alert goes too
     }
     var draftRed: [PR] { prs.filter { $0.ci == "red" && $0.isDraft && $0.recent } }
     var staleRed: [PR] { prs.filter { $0.ci == "red" && !$0.recent } }
@@ -725,7 +725,7 @@ final class Model: ObservableObject {
         enrich()
         if first {
             if let p = needsYouPRs.first {
-                say("\(p.short) needs a fix\nhover me to see why", .upset, seconds: 14)
+                say("\(p.short) needs a fix\nhover me to see why", .upset, seconds: 14, sticky: "pr:\(p.id)")   // sticky: goes when the PR is fixed or hidden
             } else if mergedToday > 0 {
                 say("Hi! \(mergedToday) merged today 🏆", .happy, seconds: 8)
             }
