@@ -217,8 +217,9 @@ struct Card: View {
         .gesture(DragGesture(minimumDistance: 1)
             .onChanged { _ in
                 let x = NSEvent.mouseLocation.x
-                if m.gripFrom == nil { m.gripFrom = (x, m.cardWidth) }
-                let dx = (x - m.gripFrom!.mouse) * (m.cardOnLeft ? -1 : 1)
+                // the direction is fixed when the drag starts: widening can move the card to Buddy's other side mid-drag
+                if m.gripFrom == nil { m.gripFrom = (x, m.cardWidth, m.cardOnLeft ? -1 : 1) }
+                let dx = (x - m.gripFrom!.mouse) * m.gripFrom!.sign
                 m.cardWidth = min(max(m.gripFrom!.width + dx, 300), 900)
                 m.onExpandChange?()
             }

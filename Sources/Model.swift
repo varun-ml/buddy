@@ -67,7 +67,7 @@ final class Model: ObservableObject {
     @Published var cardWidth: CGFloat = { let w = UserDefaults.standard.double(forKey: "bit.cardWidth"); return w >= 300 ? w : 330 }() {
         didSet { UserDefaults.standard.set(Double(cardWidth), forKey: "bit.cardWidth") }
     }
-    var gripFrom: (mouse: CGFloat, width: CGFloat)?   // drag-to-resize start
+    var gripFrom: (mouse: CGFloat, width: CGFloat, sign: CGFloat)?   // drag-to-resize start
     @Published var stats = Stats()
     @Published var statsLoaded = false
     @Published var pose: Pose = .none
