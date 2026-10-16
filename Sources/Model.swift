@@ -62,6 +62,7 @@ final class Model: ObservableObject {
     @Published var leftSide = false
     @Published var cardHeight: CGFloat = 0   // the card's full height, so the window can fit all of it
     @Published var cardBeside = false        // too little room above Buddy: the card opens beside it (Window.cardPlacement)
+    @Published var cardOnLeft = false        // …on the pet's left (else its right)
     @Published var petLift: CGFloat = 0     // …and the window reaches below the pet by this much, so the pet is lifted back to its spot
     @Published var cardWidth: CGFloat = { let w = UserDefaults.standard.double(forKey: "bit.cardWidth"); return w >= 300 ? w : 330 }() {
         didSet { UserDefaults.standard.set(Double(cardWidth), forKey: "bit.cardWidth") }
@@ -710,7 +711,7 @@ final class Model: ObservableObject {
         for pr in new where pr.recent {
             let prev = lastCI[pr.id]
             if !first, prev != pr.ci {
-                if pr.needsYou {
+                if pr.needsYou && hiddenPRs[pr.id] != pr.sha {   // hidden with ✕: quiet until its next push
                     say(line("red", "Oh no, \(pr.short) broke\nhover me to see why", ["pr": pr.short]), .upset, seconds: 30, sticky: "pr:\(pr.id)")
                 } else if pr.ci == "green", prev == "red" || prev == "pending" {
                     say("\(pr.short) is green ✨", .happy, seconds: 8) { NSWorkspace.shared.open(URL(string: pr.url)!) }

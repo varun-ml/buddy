@@ -142,7 +142,7 @@ struct PetView: View {
                 // too little room above Buddy: the card stands beside it, on the side away from the screen edge, as tall as the
                 // screen allows. The pet keeps its spot: the window may reach below it, so the pet is lifted by petLift.
                 HStack(alignment: .bottom, spacing: 6) {
-                    if m.leftSide { pet.padding(.bottom, m.petLift); card } else { card; pet.padding(.bottom, m.petLift) }
+                    if m.cardOnLeft { card; pet.padding(.bottom, m.petLift) } else { pet.padding(.bottom, m.petLift); card }
                 }
             } else {
                 VStack(alignment: m.leftSide ? .leading : .trailing, spacing: 6) {
@@ -159,7 +159,7 @@ struct PetView: View {
             }
         }
         .padding(8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: m.leftSide ? .bottomLeading : .bottomTrailing)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: (m.showCard && m.cardBeside ? !m.cardOnLeft : m.leftSide) ? .bottomLeading : .bottomTrailing)   // the pet stays on its edge of the window
     }
 
     /// The card: measured at full height (CardHeight), scrolling only if even the whole screen is too short for it.
@@ -298,6 +298,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var homeY: CGFloat = 0
     var petSpot: NSPoint?   // where the pet stands while the card is open (the window may then reach below or beside it)
     var placed: NSRect?     // the frame resize() last set: if the window moved since (a drag), the pet moved with it
+    var cardRect: NSRect?   // the card's own rectangle on screen while it stands beside the pet
+    /// Dragged with the card open: the pet went along, so its remembered spot moves by the same amount.
+    func followDrag() {
+        guard let sp = petSpot, let pl = placed, panel.frame.origin != pl.origin else { return }
+        petSpot = NSPoint(x: sp.x + panel.frame.minX - pl.minX, y: sp.y + panel.frame.minY - pl.minY)
+        cardRect = cardRect.map { $0.offsetBy(dx: panel.frame.minX - pl.minX, dy: panel.frame.minY - pl.minY) }
+        placed = panel.frame
+    }
     /// The pet's own 100×108 rectangle on screen, wherever the card is.
     var petFrame: NSRect {
         let f = panel.frame
@@ -340,8 +348,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         mouseInPet = { [weak self] in
             guard let self = self else { return false }
-            // the card's own rectangle: the window minus its transparent margin above the card
-            return self.panel.frame.contains(NSEvent.mouseLocation)
+            // the pet, or the card itself: not the window's empty corner above the pet when the card stands beside it
+            let at = NSEvent.mouseLocation
+            return self.petFrame.contains(at) || (self.model.showCard && (self.cardRect ?? self.panel.frame).contains(at))
         }
         model.onExpandChange = { [weak self] in self?.resize() }
         model.loadSessions()
@@ -474,9 +483,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let v = NSScreen.main!.visibleFrame
             panel.setFrameOrigin(NSPoint(x: v.maxX - panel.frame.width - 12, y: v.minY + 110))
         }
-        if let sp = petSpot, let pl = placed, panel.frame.origin != pl.origin {   // dragged with the card open: the pet went along
-            petSpot = NSPoint(x: sp.x + panel.frame.minX - pl.minX, y: sp.y + panel.frame.minY - pl.minY); placed = panel.frame
-        }
+        followDrag()
         homeY = petFrame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
         if idle && !m.stayPut && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
@@ -537,11 +544,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Grow the window away from the nearer screen edge, keeping the cat where it is. The card opens above Buddy when it fits,
     /// otherwise beside it (never over it, never with blocks dropped). `petSpot` remembers where the pet stood while the card is open.
     func resize() {
+        followDrag()
         let f = panel.frame
         let spot = petSpot ?? NSPoint(x: model.leftSide || f.width <= small.width + 1 ? f.minX : f.maxX - small.width, y: f.minY)
         if f.width <= small.width + 1 { model.leftSide = f.midX < screen.midX }
         guard model.showCard && !model.squatting else {
-            petSpot = nil
+            petSpot = nil; placed = nil; cardRect = nil
             if model.cardBeside { model.cardBeside = false; model.petLift = 0 }
             let size = model.expanded && !model.squatting ? big : small
             panel.setFrame(NSRect(x: model.leftSide ? spot.x : spot.x + small.width - size.width, y: spot.y, width: size.width, height: size.height), display: true, animate: false)
@@ -551,24 +559,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let card = model.cardHeight > 0 ? model.cardHeight : big.height - small.height, width = max(big.width, model.cardWidth + 30)
         let p = cardPlacement(card: card, cardWidth: width, pet: NSRect(origin: spot, size: small), leftSide: model.leftSide, in: screen)
         if model.cardBeside != p.beside { model.cardBeside = p.beside }
+        if model.cardOnLeft != p.cardOnLeft { model.cardOnLeft = p.cardOnLeft }
         if abs(model.petLift - p.lift) > 1 { model.petLift = p.lift }
-        panel.setFrame(p.frame, display: true, animate: false); placed = p.frame
+        panel.setFrame(p.frame, display: true, animate: false); placed = p.frame; cardRect = p.beside ? p.card : nil
     }
 }
 
 /// Where the open card goes. Above the pet when the whole card fits there; otherwise beside it, on the side away from the
 /// screen edge, as tall as the screen allows and reaching below the pet if it must (`lift` raises the pet back to its spot).
 /// The pet's rectangle never changes and the card never covers it. Selftested.
-func cardPlacement(card: CGFloat, cardWidth: CGFloat, pet: NSRect, leftSide: Bool, in s: NSRect) -> (frame: NSRect, beside: Bool, lift: CGFloat) {
+func cardPlacement(card: CGFloat, cardWidth: CGFloat, pet: NSRect, leftSide: Bool, in s: NSRect)
+    -> (frame: NSRect, beside: Bool, lift: CGFloat, cardOnLeft: Bool, card: NSRect) {
     let above = card + pet.height + 22   // the card, the stack spacing, the pet, the outer padding
-    if pet.minY + above <= s.maxY {
-        return (NSRect(x: leftSide ? pet.minX : pet.maxX - cardWidth, y: pet.minY, width: cardWidth, height: above), false, 0)
+    let w = cardWidth + 6 + pet.width
+    let fitsLeft = pet.maxX - w >= s.minX, fitsRight = pet.minX + w <= s.maxX
+    if pet.minY + above <= s.maxY || !(fitsLeft || fitsRight) {   // fits above, or no room beside either: above, scrolling if it must
+        let f = NSRect(x: leftSide ? pet.minX : pet.maxX - cardWidth, y: pet.minY, width: cardWidth, height: min(above, s.maxY - pet.minY))
+        return (f, false, 0, !leftSide, f)
     }
     let h = min(card + 16, s.height)                      // the card plus the outer padding, at most the whole screen
     let y = max(s.minY, min(pet.minY, s.maxY - h))         // as low as it must go, never off the screen
     let lift = pet.minY - y
-    let w = cardWidth + 6 + pet.width
-    return (NSRect(x: leftSide ? pet.minX : pet.maxX - w, y: y, width: w, height: max(h, lift + pet.height)), true, lift)
+    let onLeft = fitsLeft && fitsRight ? !leftSide : fitsLeft   // away from the near screen edge, or the side it fits on
+    let x = onLeft ? pet.maxX - w : pet.minX
+    let f = NSRect(x: x, y: y, width: w, height: max(h, lift + pet.height))
+    let c = NSRect(x: onLeft ? x : x + pet.width, y: y, width: w - pet.width, height: h)   // the window minus the pet's column
+    return (f, true, lift, onLeft, c)
 }
 
 /// How high up the side edge Buddy strolls: from just above the bottom to low enough that the card,
