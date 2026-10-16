@@ -680,7 +680,7 @@ final class Model: ObservableObject {
                     let r = (c["conclusion"] as? String) ?? (c["state"] as? String) ?? ""
                     return bad.contains(r) ? ((c["name"] as? String) ?? (c["context"] as? String)) : nil
                 }
-                let ci = (state == "FAILURE" || state == "ERROR") ? "red" : state == "SUCCESS" ? "green" : state == "NONE" ? "none" : "pending"
+                let ci = ciColor(state, failing: failing)
                 return PR(repo: repo, number: num, title: title, url: url, branch: n["headRefName"] as? String ?? "",
                           sha: n["headRefOid"] as? String ?? "", body: n["body"] as? String ?? "", ci: ci,
                           failing: failing, isDraft: n["isDraft"] as? Bool ?? false,
@@ -883,6 +883,17 @@ func stickyLive(_ k: String, waiting: Set<String>, red: Set<String>, done: Set<S
 /// How much longer than its own duration a bubble stays: events (done, a message for you) twice as long, chatter half again.
 // ponytail: one fixed factor per kind; a setting if anyone wants it shorter
 func linger(_ k: BubbleKind) -> Double { k == .event ? 2 : 1.5 }
+
+/// A PR's CI colour from GitHub's rollup. Red needs a check that actually failed: the rollup also says FAILURE when a run
+/// was only cancelled (a newer push replaced it), which showed a card reading "WHAT BROKE ✕" with nothing to fix (16 Oct). Selftested.
+func ciColor(_ state: String, failing: [String]) -> String {
+    switch state {
+    case "FAILURE", "ERROR": return failing.isEmpty ? "none" : "red"
+    case "SUCCESS": return "green"
+    case "NONE": return "none"
+    default: return "pending"
+    }
+}
 
 /// Does a merged PR count on the leaderboard? Not a bot's, and not a tiny one (a submodule bump or version pin changes 2 lines):
 /// buddy.json "minPRLines" (default 3) changed lines at least.

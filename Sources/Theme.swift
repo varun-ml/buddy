@@ -67,8 +67,17 @@ struct DoneChips: View {
                 }
             }
             if order.count > doneCap {
-                Button(showAll ? "show less" : "+ \(order.count - doneCap) more") { withAnimation { showAll.toggle() } }
-                    .buttonStyle(.plain).font(.system(size: 11)).foregroundColor(sub).padding(.leading, 6).padding(.vertical, 2)
+                HStack(spacing: 0) {
+                    Button(showAll ? "show less" : "+ \(order.count - doneCap) more") { withAnimation { showAll.toggle() } }
+                        .buttonStyle(.plain).font(.system(size: 11)).foregroundColor(sub).padding(.leading, 6).padding(.vertical, 2)
+                    Spacer(minLength: 4)
+                    if !showAll {   // the folded rows have no ✕ of their own while folded: hide them all at once
+                        let rest = order.dropFirst(doneCap).flatMap { groups[$0]! }
+                        Button { rest.forEach { m.ignore($0.s) } } label: {
+                            Text("✕").font(.system(size: 10, weight: .bold)).foregroundColor(sub).padding(.horizontal, 7).frame(maxHeight: .infinity).contentShape(Rectangle())
+                        }.buttonStyle(.plain).help("Hide these \(rest.count) for 24 hours")
+                    }
+                }
             }
         }
     }

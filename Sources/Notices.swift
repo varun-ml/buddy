@@ -11,14 +11,19 @@ struct NoticeList: View {
     func list(_ rows: [Bubble]) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(rows) { b in
-                Button { b.action?() } label: {
-                    HStack(spacing: 8) {
-                        Circle().fill(b.at > m.noticesSeenAt ? b.tone.color : Color.clear).frame(width: 6, height: 6)
-                        Text(b.text.components(separatedBy: "\n").first ?? b.text).font(.system(size: 12)).foregroundColor(fg).lineLimit(1)
-                        Spacer(minLength: 4)
-                        Text(ago(Date().timeIntervalSince(b.at))).font(.system(size: 11)).foregroundColor(dim)
-                    }.padding(.vertical, 4).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                HStack(spacing: 0) {
+                    Button { b.action?() } label: {
+                        HStack(spacing: 8) {
+                            Circle().fill(b.at > m.noticesSeenAt ? b.tone.color : Color.clear).frame(width: 6, height: 6)
+                            Text(b.text.components(separatedBy: "\n").first ?? b.text).font(.system(size: 12)).foregroundColor(fg).lineLimit(1)
+                            Spacer(minLength: 4)
+                            Text(ago(Date().timeIntervalSince(b.at))).font(.system(size: 11)).foregroundColor(dim)
+                        }.padding(.vertical, 4).contentShape(Rectangle())
+                    }.buttonStyle(.plain)
+                    Button { m.notices.removeAll { $0.id == b.id } } label: {   // out of the inbox; the session itself is untouched
+                        Text("✕").font(.system(size: 10, weight: .bold)).foregroundColor(dim).padding(.leading, 7).frame(maxHeight: .infinity).contentShape(Rectangle())
+                    }.buttonStyle(.plain).help("Remove from the inbox")
+                }
             }
         }
     }
