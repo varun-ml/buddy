@@ -44,6 +44,9 @@ final class Model: ObservableObject {
     @Published var relaxUntil = UserDefaults.standard.object(forKey: "bit.relax") as? Date   // relax mode (Relax.swift), until midnight
     @Published var breakUntil: Date?   // a 2-minute breathing break
     @Published var privacy = UserDefaults.standard.bool(forKey: "bit.privacy")   // privacy mode: no names on screen, no card
+    /// Stay in place: no strolling, zoomies or napping on windows; tricks still play where it stands.
+    /// Right-click → Stay in place, or buddy.json "stayPut": true. The menu's choice wins.
+    @Published var stayPut = UserDefaults.standard.object(forKey: "bit.stayPut") as? Bool ?? (config["stayPut"] as? Bool ?? false)
     @Published var leaves = 0
     @Published var notices: [Bubble] = []          // the card's inbox: every event today, newest first
     var noticesSeenAt = Date()                       // inbox items after this are new (set when the card closes)          // a leaf drifts past (relax mode walk)
@@ -382,6 +385,9 @@ final class Model: ObservableObject {
     }
 
     func hoverEnded() { hoverEndedAt = Date() }
+
+    /// Close the card: the cursor left it, or its – button. Today's inbox counts as seen. Hovering Buddy opens it again.
+    func closeCard() { showCard = false; showStale = false; noticesSeenAt = Date(); hoverEnded(); onExpandChange?() }
 
     // MARK: today's numbers (every 10 min)
 
@@ -771,6 +777,12 @@ final class Model: ObservableObject {
         UserDefaults.standard.set(privacy, forKey: "bit.privacy")
         bubble = nil; waitingToSay.removeAll()   // nothing already queued shows its words
         if privacy { showCard = false; onExpandChange?() }
+    }
+
+    func toggleStayPut() {
+        stayPut.toggle()
+        UserDefaults.standard.set(stayPut, forKey: "bit.stayPut")
+        say(stayPut ? "Staying right here 📌 Drag me if you want me somewhere else." : "Off for a stroll again 🐾", .calm, seconds: 4, kind: .ambient)
     }
 
     func toggleSnooze() {

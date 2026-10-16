@@ -60,6 +60,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let co = Model(); co.relaxUntil = nil; co.privacy = false   // several "done" waiting at once: one bubble; the inbox keeps each (your own relax/privacy settings would change that)
     co.say("selftest x", .calm); co.say("a is done", .calm, group: "a"); co.say("b is done", .calm, group: "b"); co.say("c is done", .calm, group: "c")
     co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
+    let cc = Model(); cc.relaxUntil = nil; cc.privacy = false   // the card's – button: closed means held-back bubbles come through
+    cc.showCard = true; cc.say("selftest held", .calm); precondition(cc.bubble == nil)
+    cc.closeCard(); cc.sayNext(); precondition(!cc.showCard && cc.bubble?.text == "selftest held")
     let st = Model()   // a sticky bubble goes when its reason does (here: no session is waiting)
     st.say("selftest waits", .calm, sticky: "s:gone"); precondition(st.bubble?.sticky == "s:gone"); st.resolveSticky(); precondition(st.bubble == nil)
     // Regressions we shipped once, each pinned by a check so it can't come back.
@@ -67,6 +70,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 5))
     precondition(!shouldWalk(expanded: true, hovering: false, snoozed: false, idle: 5) && !shouldWalk(expanded: false, hovering: true, snoozed: false, idle: 5))
     precondition(!shouldWalk(expanded: false, hovering: false, snoozed: true, idle: 5) && !shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 121))
+    precondition(!shouldWalk(expanded: false, hovering: false, snoozed: false, idle: 5, stayPut: true))   // "Stay in place" means it
     precondition(Model().mood != .asleep)   // no sessions open is not a nap
     do {   // "walk": "side" keeps to the nearer side edge, never so high the card can't open above it
         let scr = NSRect(x: 0, y: 25, width: 1440, height: 875), sz = NSSize(width: 100, height: 108)
@@ -282,6 +286,12 @@ if CommandLine.arguments.contains("--dump") {
     if CommandLine.arguments.count > 2 { print("link:", ccdLink(CommandLine.arguments[2])?.absoluteString ?? "none") }
     exit(0)
 }
+
+// One Buddy at a time. Two copies share the same files and settings, keep waking each other, and each used ~50% CPU (16 Oct).
+// The lock goes with the process, so a crash never leaves it stuck. launchd doesn't restart a clean exit (SuccessfulExit false).
+try? FileManager.default.createDirectory(atPath: home + "/.claude/pet", withIntermediateDirectories: true)
+let oneBuddy = open(home + "/.claude/pet/buddy.lock", O_CREAT | O_RDWR, 0o644)
+if oneBuddy >= 0 && flock(oneBuddy, LOCK_EX | LOCK_NB) != 0 { print("Buddy is already running."); exit(0) }
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

@@ -145,6 +145,19 @@ struct PetView: View {
                         .background(GeometryReader { g in Color.clear.preference(key: CardHeight.self, value: g.size.height) })
                 }
                 .frame(maxHeight: m.cardHeight > 0 ? m.cardHeight : nil)
+                .overlay(alignment: m.leftSide ? .topTrailing : .topLeading) {
+                    // close the card now; bubbles held back while it was open come straight through. Hover opens it again.
+                    Button { m.closeCard(); m.sayNext() } label: {
+                        Image(systemName: "minus").font(.system(size: 9, weight: .bold)).foregroundColor(T.fg)
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(T.solid))
+                            .overlay(Circle().stroke(T.sub.opacity(0.4), lineWidth: 0.5))
+                            .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain).help("Close the card")
+                    .offset(x: m.leftSide ? 6 : -6, y: -6)   // on the corner away from the resize grip
+                }
                 .onPreferenceChange(CardHeight.self) { h in
                     if abs(h - m.cardHeight) > 1 { m.cardHeight = h; m.onExpandChange?() }
                     if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("card height \(Int(h))\n".data(using: .utf8)!) }
@@ -172,6 +185,7 @@ struct PetView: View {
                 .contextMenu {
                     Button(m.breathing ? "End the break" : m.snoozed ? "Wake up" : "Nap 1h") { m.toggleSnooze() }
                     Button((m.relaxing ? "✓ " : "") + "🌿 Relax mode") { m.toggleRelax() }
+                    Button((m.stayPut ? "✓ " : "") + "📌 Stay in place") { m.toggleStayPut() }
                     Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
                     if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
                     Divider()
@@ -229,7 +243,7 @@ struct PetView: View {
             }
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.showCard = false; m.showStale = false; m.noticesSeenAt = Date(); m.hoverEnded(); m.onExpandChange?() }
+                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.closeCard() }
             }
         }
     }
@@ -372,7 +386,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         let after = CommandLine.arguments.firstIndex(of: "--squat").flatMap { Double(CommandLine.arguments[$0 + 1]) } ?? 300
         let forced = forcedSquat
-        guard forced || idle > after, !m.expanded, !m.snoozed,
+        guard forced || idle > after, !m.expanded, !m.snoozed, !m.stayPut,
               let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier,
               let wins = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]],
               let full = NSScreen.screens.first?.frame,
@@ -413,7 +427,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         homeY = panel.frame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
         if idle && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
-        if m.zoomies {
+        if m.zoomies && !m.stayPut {
             var f = panel.frame
             if m.walk == "side" {   // dash to the far end of the edge and back
                 let (low, high) = sideRange(in: screen, size: small)
@@ -437,7 +451,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let quiet = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: CGEventType(rawValue: ~0)!)
-        let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet)
+        let canWalk = shouldWalk(expanded: m.expanded, hovering: m.hovering, snoozed: m.snoozed, idle: quiet, stayPut: m.stayPut)
         guard canWalk else { if m.walking { m.walking = false }; target = nil; sideTarget = nil; return }
         var f = panel.frame
         let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
@@ -501,12 +515,12 @@ func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, roll: 
 }
 
 /// Always on the move while you're at the desk. Stands still only under your cursor, with the card open, napping,
-/// or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
+/// told to stay in place, or when nobody has touched the mouse or keyboard for 2 min (you're away; it saves the battery). Selftested.
 /// At least half of Buddy is inside one screen's usable area. A sliver peeking out below the menu bar does not count.
 func mostlyVisible(_ f: NSRect, on screens: [NSRect]) -> Bool {
     screens.contains { let i = $0.intersection(f); return i.width >= f.width / 2 && i.height >= f.height / 2 }
 }
 
-func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double) -> Bool {
-    !expanded && !hovering && !snoozed && idle <= 120
+func shouldWalk(expanded: Bool, hovering: Bool, snoozed: Bool, idle: Double, stayPut: Bool = false) -> Bool {
+    !expanded && !hovering && !snoozed && !stayPut && idle <= 120
 }
