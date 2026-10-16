@@ -663,7 +663,7 @@ final class Model: ObservableObject {
 
     func loadPRs() {
         DispatchQueue.global().async {
-            let q = "query{viewer{pullRequests(states:OPEN,first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title url body isDraft updatedAt headRefName headRefOid repository{nameWithOwner} commits(last:1){nodes{commit{statusCheckRollup{state contexts(first:60){nodes{__typename ... on CheckRun{name conclusion} ... on StatusContext{context state}}}}}}}}}}}"
+            let q = "query{viewer{pullRequests(states:OPEN,first:100,orderBy:{field:UPDATED_AT,direction:DESC}){nodes{number title url body isDraft updatedAt headRefName headRefOid repository{nameWithOwner} commits(last:1){nodes{commit{statusCheckRollup{state contexts(first:100){pageInfo{hasNextPage} nodes{__typename ... on CheckRun{name conclusion} ... on StatusContext{context state}}}}}}}}}}}"
             guard let data = gh(["api", "graphql", "-f", "query=\(q)"]),
                   let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let nodes = ((((root["data"] as? [String: Any])?["viewer"] as? [String: Any])?["pullRequests"] as? [String: Any])?["nodes"] as? [[String: Any]])
@@ -680,7 +680,8 @@ final class Model: ObservableObject {
                     let r = (c["conclusion"] as? String) ?? (c["state"] as? String) ?? ""
                     return bad.contains(r) ? ((c["name"] as? String) ?? (c["context"] as? String)) : nil
                 }
-                let ci = ciColor(state, failing: failing)
+                let more = ((rollup?["contexts"] as? [String: Any])?["pageInfo"] as? [String: Any])?["hasNextPage"] as? Bool ?? false
+                let ci = ciColor(state, failing: failing, unread: more)
                 return PR(repo: repo, number: num, title: title, url: url, branch: n["headRefName"] as? String ?? "",
                           sha: n["headRefOid"] as? String ?? "", body: n["body"] as? String ?? "", ci: ci,
                           failing: failing, isDraft: n["isDraft"] as? Bool ?? false,
@@ -885,10 +886,12 @@ func stickyLive(_ k: String, waiting: Set<String>, red: Set<String>, done: Set<S
 func linger(_ k: BubbleKind) -> Double { k == .event ? 2 : 1.5 }
 
 /// A PR's CI colour from GitHub's rollup. Red needs a check that actually failed: the rollup also says FAILURE when a run
-/// was only cancelled (a newer push replaced it), which showed a card reading "WHAT BROKE ✕" with nothing to fix (16 Oct). Selftested.
-func ciColor(_ state: String, failing: [String]) -> String {
+/// was only cancelled (a newer push replaced it), which showed a card reading "WHAT BROKE ✕" with nothing to fix (16 Oct).
+/// Cancelled-only counts as pending, so the replacing run still gets its green bubble. `unread`: GitHub had more checks than
+/// we fetched, so the failure may be among them; trust the rollup. Selftested.
+func ciColor(_ state: String, failing: [String], unread: Bool = false) -> String {
     switch state {
-    case "FAILURE", "ERROR": return failing.isEmpty ? "none" : "red"
+    case "FAILURE", "ERROR": return failing.isEmpty && !unread ? "pending" : "red"
     case "SUCCESS": return "green"
     case "NONE": return "none"
     default: return "pending"

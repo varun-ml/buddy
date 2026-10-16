@@ -169,7 +169,7 @@ struct PRBlock: View {
             if let why = d?.why {
                 label("WHAT BROKE", why, lines: 3, color: Color(red: 1, green: 0.62, blue: 0.62))
             } else {
-                label("WHAT BROKE", d == nil ? "reading the CI log…" : "✕ " + pr.failing.joined(separator: " · ✕ "), lines: 2, color: Color(red: 1, green: 0.62, blue: 0.62))
+                label("WHAT BROKE", d == nil ? "reading the CI log…" : pr.failing.isEmpty ? "a check failed: Open PR shows which" : "✕ " + pr.failing.joined(separator: " · ✕ "), lines: 2, color: Color(red: 1, green: 0.62, blue: 0.62))
             }
             if let s = d?.session {
                 Text("Last worked on in \(s.codex ? "Codex · " : "")\((s.cwd as NSString).lastPathComponent) · \(ago(Date().timeIntervalSince(s.when))) ago")
