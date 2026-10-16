@@ -200,7 +200,7 @@ struct Card: View {
             switch T.name { case "burrow": BurrowCard(m: m); case "glass": GlassCard(m: m); default: InkCard(m: m) }
         }
         .frame(width: m.cardWidth, alignment: .topLeading)
-        .overlay(alignment: m.leftSide ? .trailing : .leading) { grip }
+        .overlay(alignment: m.cardOnLeft ? .leading : .trailing) { grip }   // the edge away from the pet
         .background(ThemeSurface(radius: T.radius))
         .clipShape(RoundedRectangle(cornerRadius: T.radius))
         .overlay(RoundedRectangle(cornerRadius: T.radius).stroke(T.name == "ink" ? Color.white.opacity(0.08) : T.name == "glass" ? Color.white.opacity(0.55) : hex(0x784f28).opacity(0.12), lineWidth: T.name == "glass" ? 0.5 : 1))
@@ -218,7 +218,7 @@ struct Card: View {
             .onChanged { _ in
                 let x = NSEvent.mouseLocation.x
                 if m.gripFrom == nil { m.gripFrom = (x, m.cardWidth) }
-                let dx = (x - m.gripFrom!.mouse) * (m.leftSide ? 1 : -1)
+                let dx = (x - m.gripFrom!.mouse) * (m.cardOnLeft ? -1 : 1)
                 m.cardWidth = min(max(m.gripFrom!.width + dx, 300), 900)
                 m.onExpandChange?()
             }

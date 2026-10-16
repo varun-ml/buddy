@@ -97,7 +97,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
         for (card, width, x) in [(500.0, 360.0, 1300.0), (800, 360, 1300), (800, 360, 20), (2000, 360, 1300), (800, 900, 700)] as [(CGFloat, CGFloat, CGFloat)] {
             let pet = NSRect(x: x, y: 110, width: 100, height: 108), s = NSRect(x: 0, y: 0, width: 1512, height: 944)
             let p = cardPlacement(card: card, cardWidth: width, pet: pet, leftSide: x < s.midX, in: s)
-            precondition(p.beside == (card > 600 && width < 700) && (!p.beside || s.contains(p.frame)), "card \(card)×\(width): \(p.frame) beside \(p.beside)")
+            precondition(p.beside == (card > 600 && width < 700) && (width > 780 || s.contains(p.frame)), "card \(card)×\(width): \(p.frame) beside \(p.beside)")
             let petIn = NSRect(x: p.cardOnLeft ? p.frame.maxX - 100 : p.frame.minX, y: p.frame.minY + p.lift, width: 100, height: 108)
             precondition(!p.beside || petIn == pet, "the pet moved: \(petIn) vs \(pet)")
             precondition(!p.beside || !p.card.intersects(pet), "card \(card) covers the pet")

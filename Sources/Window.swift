@@ -145,7 +145,7 @@ struct PetView: View {
                     if m.cardOnLeft { card; pet.padding(.bottom, m.petLift) } else { pet.padding(.bottom, m.petLift); card }
                 }
             } else {
-                VStack(alignment: m.leftSide ? .leading : .trailing, spacing: 6) {
+                VStack(alignment: (m.showCard ? !m.cardOnLeft : m.leftSide) ? .leading : .trailing, spacing: 6) {
                     Spacer(minLength: 0)
                     if m.showCard {
                         card
@@ -159,7 +159,7 @@ struct PetView: View {
             }
         }
         .padding(8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: (m.showCard && m.cardBeside ? !m.cardOnLeft : m.leftSide) ? .bottomLeading : .bottomTrailing)   // the pet stays on its edge of the window
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: (m.showCard ? !m.cardOnLeft : m.leftSide) ? .bottomLeading : .bottomTrailing)   // the pet stays on its edge of the window
     }
 
     /// The card: measured at full height (CardHeight), scrolling only if even the whole screen is too short for it.
@@ -169,7 +169,7 @@ struct PetView: View {
                 .background(GeometryReader { g in Color.clear.preference(key: CardHeight.self, value: g.size.height) })
         }
         .frame(maxHeight: m.cardHeight > 0 ? m.cardHeight : nil)
-        .overlay(alignment: m.leftSide ? .topTrailing : .topLeading) {
+        .overlay(alignment: m.cardOnLeft ? .topLeading : .topTrailing) {
             // close the card now; bubbles held back while it was open come straight through. Hover opens it again.
             Button { m.closeCard(); m.sayNext() } label: {
                 Image(systemName: "minus").font(.system(size: 9, weight: .bold)).foregroundColor(T.fg)
@@ -180,7 +180,7 @@ struct PetView: View {
                     .contentShape(Circle())
             }
             .buttonStyle(.plain).help("Close the card")
-            .offset(x: m.leftSide ? 6 : -6, y: -6)   // on the corner away from the resize grip
+            .offset(x: m.cardOnLeft ? -6 : 6, y: -6)   // on the corner away from the resize grip
         }
         .onPreferenceChange(CardHeight.self) { h in
             if abs(h - m.cardHeight) > 1 { m.cardHeight = h; m.onExpandChange?() }
@@ -405,7 +405,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Keep the litter of waiting kittens just beside Bit.
     func placeLitter() {
         let n = model.waiting.count
-        guard n > 0, !model.squatting else { if litter.isVisible { litter.orderOut(nil) }; return }
+        guard n > 0, !model.squatting, !model.showCard else { if litter.isVisible { litter.orderOut(nil) }; return }   // the open card lists them
         let w = CGFloat(n) * 36 + 8, f = petFrame
         let catX = f.minX + 8
         let x = catX - w >= screen.minX ? catX - w : catX + 84   // the side with room
@@ -574,8 +574,11 @@ func cardPlacement(card: CGFloat, cardWidth: CGFloat, pet: NSRect, leftSide: Boo
     let w = cardWidth + 6 + pet.width
     let fitsLeft = pet.maxX - w >= s.minX, fitsRight = pet.minX + w <= s.maxX
     if pet.minY + above <= s.maxY || !(fitsLeft || fitsRight) {   // fits above, or no room beside either: above, scrolling if it must
-        let f = NSRect(x: leftSide ? pet.minX : pet.maxX - cardWidth, y: pet.minY, width: cardWidth, height: min(above, s.maxY - pet.minY))
-        return (f, false, 0, !leftSide, f)
+        // ponytail: a card wider than the room on both sides of a mid-screen pet still runs off; only past ~780 pt wide on a laptop
+        let rightOK = pet.minX + cardWidth <= s.maxX, leftOK = pet.maxX - cardWidth >= s.minX
+        let onLeft = leftOK && rightOK ? !leftSide : leftOK || !rightOK && pet.midX > s.midX
+        let f = NSRect(x: onLeft ? pet.maxX - cardWidth : pet.minX, y: pet.minY, width: cardWidth, height: min(above, s.maxY - pet.minY))
+        return (f, false, 0, onLeft, f)
     }
     let h = min(card + 16, s.height)                      // the card plus the outer padding, at most the whole screen
     let y = max(s.minY, min(pet.minY, s.maxY - h))         // as low as it must go, never off the screen
