@@ -380,6 +380,9 @@ final class Model: ObservableObject {
 
     func hoverEnded() { hoverEndedAt = Date() }
 
+    /// Close the card: the cursor left it, or its – button. Today's inbox counts as seen. Hovering Buddy opens it again.
+    func closeCard() { showCard = false; showStale = false; noticesSeenAt = Date(); hoverEnded(); onExpandChange?() }
+
     // MARK: today's numbers (every 10 min)
 
     func loadStats() {

@@ -60,6 +60,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     let co = Model(); co.relaxUntil = nil; co.privacy = false   // several "done" waiting at once: one bubble; the inbox keeps each (your own relax/privacy settings would change that)
     co.say("selftest x", .calm); co.say("a is done", .calm, group: "a"); co.say("b is done", .calm, group: "b"); co.say("c is done", .calm, group: "c")
     co.bubble = nil; co.sayNext(); precondition(co.bubble?.text == "3 done: a, b, c" && co.notices.count == 4 && co.unreadNotices == 4)
+    let cc = Model(); cc.relaxUntil = nil; cc.privacy = false   // the card's – button: closed means held-back bubbles come through
+    cc.showCard = true; cc.say("selftest held", .calm); precondition(cc.bubble == nil)
+    cc.closeCard(); cc.sayNext(); precondition(!cc.showCard && cc.bubble?.text == "selftest held")
     let st = Model()   // a sticky bubble goes when its reason does (here: no session is waiting)
     st.say("selftest waits", .calm, sticky: "s:gone"); precondition(st.bubble?.sticky == "s:gone"); st.resolveSticky(); precondition(st.bubble == nil)
     // Regressions we shipped once, each pinned by a check so it can't come back.

@@ -145,6 +145,19 @@ struct PetView: View {
                         .background(GeometryReader { g in Color.clear.preference(key: CardHeight.self, value: g.size.height) })
                 }
                 .frame(maxHeight: m.cardHeight > 0 ? m.cardHeight : nil)
+                .overlay(alignment: m.leftSide ? .topTrailing : .topLeading) {
+                    // close the card now; bubbles held back while it was open come straight through. Hover opens it again.
+                    Button { m.closeCard(); m.sayNext() } label: {
+                        Image(systemName: "minus").font(.system(size: 9, weight: .bold)).foregroundColor(T.fg)
+                            .frame(width: 18, height: 18)
+                            .background(Circle().fill(T.solid))
+                            .overlay(Circle().stroke(T.sub.opacity(0.4), lineWidth: 0.5))
+                            .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain).help("Close the card")
+                    .offset(x: m.leftSide ? 6 : -6, y: -6)   // on the corner away from the resize grip
+                }
                 .onPreferenceChange(CardHeight.self) { h in
                     if abs(h - m.cardHeight) > 1 { m.cardHeight = h; m.onExpandChange?() }
                     if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("card height \(Int(h))\n".data(using: .utf8)!) }
@@ -224,7 +237,7 @@ struct PetView: View {
             }
         } else {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.showCard = false; m.showStale = false; m.noticesSeenAt = Date(); m.hoverEnded(); m.onExpandChange?() }
+                if !catHover && !cardHover && m.showCard && !mouseInPet() { m.closeCard() }
             }
         }
     }
