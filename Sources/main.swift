@@ -158,7 +158,9 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-\(tab).png"))
         }
     } } }
-    // a busy day (25 finished sessions, 10 names) stays 10 short rows: repeats fold, so the card keeps its shape
+    // a busy day (25 finished sessions, 10 names): repeats fold and only the first `doneCap` names show, so the card keeps its shape
+    // and every other block stays. The session list is the only part that gives way (16 Oct: hiding the team and the quote to make
+    // room lost both without anyone noticing).
     var crowdFailed = false
     MainActor.assumeIsolated {
         let base = m.sessions
@@ -171,14 +173,16 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
             m.sessions = base + crowd; let h1 = height()
             let r = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light)); r.scale = 2
             if let t = r.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-busy.png")) }
-            // too little room: the card drops usage, team, quote and tiles (never sessions) instead of scrolling
-            m.tight = 4; let h4 = height()
-            let r4 = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light)); r4.scale = 2
-            if let t = r4.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: t)?.representation(using: .png, properties: [:]) { try? png.write(to: URL(fileURLWithPath: "\(dir)/\(th)-squeezed.png")) }
-            print("\(th): busy card \(Int(h1)) pt, squeezed \(Int(h4)) pt")
-            m.tight = 0
-            if h1 - h4 < 250 { print("SQUEEZED CARD STILL TOO TALL in \(th): dropping blocks saves only \(Int(h1 - h4)) pt"); crowdFailed = true }
-            if h1 - h0 > 240 { print("DONE LIST TOO TALL in \(th): 25 finished sessions in 10 names add \(Int(h1 - h0)) pt; repeats must fold into one row"); crowdFailed = true }
+            print("\(th): card \(Int(h0)) pt, busy \(Int(h1)) pt")
+            if h1 - h0 > 150 { print("DONE LIST TOO TALL in \(th): 25 finished sessions in 10 names add \(Int(h1 - h0)) pt; past \(doneCap) names they must fold into \"+ N more\""); crowdFailed = true }
+            // every block is still on the busy card: taking it away must make the card shorter
+            let st = m.stats, lim = m.limits, hist = m.history
+            for (name, drop, put) in [("team leaderboard", { var s = st; s.team = []; m.stats = s }, { m.stats = st }),
+                                      ("quote", { m.history = [] }, { m.history = hist }),
+                                      ("usage rings", { m.limits = [] }, { m.limits = lim })] as [(String, () -> Void, () -> Void)] {
+                drop(); let without = height(); put()
+                if h1 - without < 20 { print("\(name.uppercased()) MISSING from the busy \(th) card"); crowdFailed = true }
+            }
         }
         m.sessions = base
     }

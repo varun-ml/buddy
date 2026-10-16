@@ -184,15 +184,13 @@ struct GlassCard: View {
                 }.buttonStyle(.plain); Spacer(minLength: 0); ClearX { m.ignore(w) } }.contextMenu { Button("Ignore this session") { m.ignore(w) } }
             }
             ForEach(m.needsYouPRs) { PRBlock(m: m, pr: $0).background(RoundedRectangle(cornerRadius: 14).fill(Color.white.opacity(0.55))) }
-            if m.tight < 4 {
-                HStack(spacing: 8) {
-                    if !statsRepos.isEmpty {
-                        num("\(s.merged)", "merged", s.gain)
-                        num("\(s.opened)", "opened", nil)
-                    }
-                    num(hm(m.workedToday), "worked", nil)
-                    num(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
+            HStack(spacing: 8) {
+                if !statsRepos.isEmpty {
+                    num("\(s.merged)", "merged", s.gain)
+                    num("\(s.opened)", "opened", nil)
                 }
+                num(hm(m.workedToday), "worked", nil)
+                num(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
             }
             if !pots.isEmpty || !m.stuck.isEmpty {
                 VStack(spacing: 0) {
@@ -222,7 +220,7 @@ struct GlassCard: View {
                     DoneChips(m: m, pots: pots, sub: gSub).padding(.horizontal, 6).padding(.vertical, 4)
                 }.padding(.vertical, 6).padding(.horizontal, 8).background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55)))
             }
-            if !s.team.isEmpty && m.tight < 2 {
+            if !s.team.isEmpty {
                 plat(10) {
                     HStack(alignment: .top, spacing: 6) {
                         ForEach(s.podium, id: \.medal) { r in
@@ -242,21 +240,22 @@ struct GlassCard: View {
                     }
                 }.help("PRs merged by the team: \(s.teamTotal) in all")
             }
-            if !m.limits.isEmpty && m.tight < 1 {
-                plat {
-                    VStack(alignment: .leading, spacing: 8) {
+            if !m.limits.isEmpty {
+                plat {   // one short bar per limit, like Burrow and Ink: rings took 160 pt and pushed the quote off a laptop screen
+                    VStack(alignment: .leading, spacing: 6) {
                         lab("Usage")
-                        HStack(alignment: .top, spacing: 6) {
-                            ForEach(m.limits) { l in
-                                VStack(spacing: 4) {
-                                    ZStack {
-                                        ringView(44, 5, l.used, 100, l.used >= 80 ? hex(0xff9500) : gGreen, Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.12))
-                                        Text("\(Int(l.used))%").font(.system(size: 13, weight: .semibold))
+                        ForEach(m.limits) { l in
+                            HStack(spacing: 8) {
+                                Text(l.name.replacingOccurrences(of: "◆ ", with: "")).font(.system(size: 12, weight: .medium)).foregroundColor(gInk).lineLimit(1).frame(width: 86, alignment: .leading)
+                                GeometryReader { geo in
+                                    ZStack(alignment: .leading) {
+                                        Capsule().fill(Color(red: 60 / 255, green: 60 / 255, blue: 67 / 255).opacity(0.12))
+                                        Capsule().fill(l.used >= 80 ? hex(0xff9500) : gGreen).frame(width: geo.size.width * min(1, l.used / 100))
                                     }
-                                    Text(l.name.replacingOccurrences(of: "◆ ", with: "")).font(.system(size: 11, weight: .medium)).foregroundColor(gSub).lineLimit(1)
-                                    Text(l.resets.map { "resets " + resetText($0) } ?? " ").font(.system(size: 10, weight: .medium)).foregroundColor(gSub.opacity(0.7)).lineLimit(1)
-                                }.frame(maxWidth: .infinity)
-                            }
+                                }.frame(height: 6)
+                                Text("\(Int(l.used))%").font(.system(size: 12, weight: .semibold)).foregroundColor(gInk).monospacedDigit().frame(width: 34, alignment: .trailing)
+                                Text(l.resets.map { resetText($0) } ?? "").font(.system(size: 11)).foregroundColor(gSub).lineLimit(1).frame(width: 64, alignment: .leading)
+                            }.frame(height: 18).help(l.resets.map { "resets " + resetText($0) } ?? "")
                         }
                     }
                 }

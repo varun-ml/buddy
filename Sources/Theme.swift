@@ -30,19 +30,23 @@ var T = themes[UserDefaults.standard.string(forKey: "bit.theme") ?? (config["the
 // MARK: what every card shows, shaped once. A theme decides only how it looks.
 
 let listCap = 3   // rows per list before "+ N more", so the card never scrolls
+let doneCap = 5   // finished-session rows before "+ N more": the list is the only part of the card that gives way, never the other blocks
 
-/// Finished sessions as a short list, one row per name ("sbet ×7 · done 3m"): every one is listed, repeats fold into one row,
-/// so a busy day stays a few lines. The mark says Claude or Codex. Click opens the newest; ✕ hides the row for 24 hours.
+/// Finished sessions as a short list, one row per name ("sbet ×7 · done 3m"): repeats fold into one row,
+/// so a busy day stays a few lines; past `doneCap` names the rest fold behind "+ N more". The mark says Claude or Codex.
+/// Click opens the newest; ✕ hides the row for 24 hours.
 struct DoneChips: View {
     let m: Model; let pots: [Pot]; var fg: Color = .primary; var sub: Color = .secondary
+    @State private var showAll = false
     var body: some View {
         let done = pots.filter(\.done)
         // one row per name and agent: a Claude and a Codex session in the same folder stay apart
         let key = { (p: Pot) in "\(p.s.agent.name) \(p.s.repo ?? "?")" }
         let groups = Dictionary(grouping: done, by: key)
         let order = done.map(key).reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-        VStack(spacing: 0) {
-            ForEach(order, id: \.self) { k in
+        let shown = showAll ? order : Array(order.prefix(doneCap))
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(shown, id: \.self) { k in
                 let g = groups[k]!, a = g[0].s.agent
                 HStack(spacing: 0) {
                     Button { activate(g[0].s) } label: {
@@ -61,6 +65,10 @@ struct DoneChips: View {
                         Text("✕").font(.system(size: 10, weight: .bold)).foregroundColor(sub).padding(.horizontal, 7).frame(maxHeight: .infinity).contentShape(Rectangle())
                     }.buttonStyle(.plain).help(g.count > 1 ? "Hide these \(g.count) for 24 hours" : "Hide for 24 hours")
                 }
+            }
+            if order.count > doneCap {
+                Button(showAll ? "show less" : "+ \(order.count - doneCap) more") { withAnimation { showAll.toggle() } }
+                    .buttonStyle(.plain).font(.system(size: 11)).foregroundColor(sub).padding(.leading, 6).padding(.vertical, 2)
             }
         }
     }
@@ -252,7 +260,7 @@ struct Carousel: View {
 
     var body: some View {
         let items = m.history
-        if m.tight < 3, let b = items.isEmpty ? nil : items[min(index, items.count - 1)] {
+        if let b = items.isEmpty ? nil : items[min(index, items.count - 1)] {
             let quote = b.kind == .quote
             let (ink, sub, accent): (Color, Color, Color) = T.name == "burrow" ? (bInk, bSub, bClay) : T.name == "glass" ? (gInk, gSub, gBlue) : (kInk, kSub, kIndigo)
             VStack(alignment: .leading, spacing: 7) {

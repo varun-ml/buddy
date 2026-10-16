@@ -207,21 +207,19 @@ struct InkCard: View {
             if pots.isEmpty && m.waiting.isEmpty { Text("Nothing running.").font(.system(size: 13)).foregroundColor(kSub).padding(.vertical, 4) }
             DoneChips(m: m, pots: pots, fg: Color.white.opacity(0.75), sub: kSub)
 
-            if m.tight < 4 {
-                HStack(spacing: 0) {
-                    if !statsRepos.isEmpty {
-                        stat("\(s.merged)", "merged", s.gain)
-                        Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
-                        stat("\(s.opened)", "opened", nil)
-                        Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
-                    }
-                    stat(hm(m.workedToday), "worked", nil)
+            HStack(spacing: 0) {
+                if !statsRepos.isEmpty {
+                    stat("\(s.merged)", "merged", s.gain)
                     Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
-                    stat(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
-                }.fixedSize(horizontal: false, vertical: true).overlay(RoundedRectangle(cornerRadius: 8).stroke(hex(0x1f1f23), lineWidth: 1)).padding(.top, 14)
-            }
+                    stat("\(s.opened)", "opened", nil)
+                    Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
+                }
+                stat(hm(m.workedToday), "worked", nil)
+                Rectangle().fill(hex(0x1f1f23)).frame(width: 1)
+                stat(m.sinceBreak.map(hm) ?? "now", "since break", nil, hot: (m.sinceBreak ?? 0) >= 90 * 60)
+            }.fixedSize(horizontal: false, vertical: true).overlay(RoundedRectangle(cornerRadius: 8).stroke(hex(0x1f1f23), lineWidth: 1)).padding(.top, 14)
 
-            if !s.team.isEmpty && m.tight < 2 {
+            if !s.team.isEmpty {
                 HStack(spacing: 0) {
                     ForEach(s.podium, id: \.medal) { r in
                         VStack(alignment: .leading, spacing: 1) {
@@ -240,7 +238,7 @@ struct InkCard: View {
                 }.padding(.top, 12).help("PRs merged by the team: \(s.teamTotal) in all")
             }
 
-            if !m.limits.isEmpty && m.tight < 1 {
+            if !m.limits.isEmpty {
                 lb("Usage", "").padding(.top, 14)
                 ForEach(m.limits) { l in
                     HStack(spacing: 8) {

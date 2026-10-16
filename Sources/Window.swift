@@ -163,6 +163,7 @@ struct PetView: View {
                     if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("card height \(Int(h))\n".data(using: .utf8)!) }
                 }
                 .onHover { cardHover = $0; settle() }
+                .padding(.bottom, -m.cardOverlap).zIndex(1)   // drawn over the pet when it needs the room
             } else if let b = m.bubble, !m.squatting {
                 BubbleView(bubble: b, leftSide: m.leftSide, m: m)
                     .onHover { m.holdBubble($0) }
@@ -453,7 +454,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if m.zoomies && !m.stayPut {
             var f = panel.frame
             if m.walk == "side" {   // dash to the far end of the edge and back
-                let (low, high) = sideRange(in: screen, size: small)
+                let (low, high) = sideRange(in: screen, size: small, card: model.cardHeight)
                 if target == nil || abs((target ?? 0) - f.minY) < 8 || !(low...high).contains(target!) {   // a target left from walking the floor is an x
                     target = f.midY < (low + high) / 2 + small.height / 2 ? high : low
                 }
@@ -479,7 +480,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var f = panel.frame
         let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
         if m.walk == "side" {
-            if sideTarget == nil { sideTarget = strollTarget(side: true, from: f, in: screen, size: small, roll: .random(in: 0...1)) }
+            if sideTarget == nil { sideTarget = strollTarget(side: true, from: f, in: screen, size: small, card: model.cardHeight, roll: .random(in: 0...1)) }
             let t = sideTarget!, dx = t.x - f.minX, dy = t.y - f.minY, d = hypot(dx, dy)
             if d < 2 { sideTarget = nil; return }
             if !m.walking { m.walking = true }
@@ -509,12 +510,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let f = panel.frame
         if f.width <= small.width + 1 { model.leftSide = f.midX < screen.midX }
         var size = model.expanded && !model.squatting ? big : small
+        if !model.showCard && model.cardOverlap > 0 { model.cardOverlap = 0 }
         if model.showCard && !model.squatting {
             let want = (model.cardHeight > 0 ? model.cardHeight : big.height - small.height) + small.height + 22
-            let room = screen.maxY - f.minY - small.height - 22
-            if model.cardHeight > room && model.tight < 4 { model.tight += 1 }                 // too tall: drop the next block (see Model.tight)
-            else if model.tight > 0 && model.cardHeight + 150 < room { model.tight -= 1 }      // room again (150 ≈ the biggest block, so no flip-flop)
-            size = NSSize(width: max(big.width, model.cardWidth + 30), height: min(want, screen.maxY - f.minY))
+            let overlap = min(max(0, want - (screen.maxY - f.minY)), small.height + 22)   // never more than the pet itself
+            if abs(model.cardOverlap - overlap) > 1 { model.cardOverlap = overlap }
+            size = NSSize(width: max(big.width, model.cardWidth + 30), height: min(want - overlap, screen.maxY - f.minY))
             if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("room for card \(Int(screen.maxY - f.minY - small.height - 22))\n".data(using: .utf8)!) }
         }
         let x = model.leftSide ? f.minX : f.maxX - size.width
@@ -522,18 +523,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// How high up the side edge Buddy strolls: from just above the bottom to low enough that the card,
-/// which opens above Buddy, still has room for its main blocks.
-func sideRange(in s: NSRect, size: NSSize) -> (low: CGFloat, high: CGFloat) {
+/// How high up the side edge Buddy strolls: from just above the bottom to low enough that the whole card,
+/// which opens above Buddy, still fits (it may cover the pet). `card` is the card's last measured height (0 before it first opens).
+func sideRange(in s: NSRect, size: NSSize, card: CGFloat = 0) -> (low: CGFloat, high: CGFloat) {
     let low = s.minY + 10
-    return (low, max(low, s.maxY - size.height - 360))
+    return (low, max(low, s.maxY - size.height - max(360, card - size.height)))   // the open card may cover the pet itself
 }
 
 /// Where to stroll next, `roll` in 0…1. Along the bottom: anywhere across, at the current height.
 /// Up and down the side: on the nearer side edge, anywhere in `sideRange`. Selftested.
-func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, roll: CGFloat) -> CGPoint {
+func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, card: CGFloat = 0, roll: CGFloat) -> CGPoint {
     guard side else { return CGPoint(x: s.minX + 10 + roll * (s.width - size.width - 20), y: f.minY) }
-    let (low, high) = sideRange(in: s, size: size)
+    let (low, high) = sideRange(in: s, size: size, card: card)
     return CGPoint(x: f.midX < s.midX ? s.minX + 10 : s.maxX - size.width - 10, y: low + roll * (high - low))
 }
 
