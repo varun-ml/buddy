@@ -21,7 +21,7 @@ extension Model {
         }
     }
 
-    /// Runs in its own process session (python's setsid): install.sh restarts Buddy, and launchd stops everything in
+    /// Runs in its own process session (python's fork + setsid): install.sh restarts Buddy, and launchd stops everything in
     /// Buddy's process group with it. If anything fails (local changes in the folder, no network), Buddy keeps running
     /// and says why; the log is /tmp/buddy.update.log.
     func update() {
@@ -29,9 +29,11 @@ extension Model {
         let cmd = "cd '\(dir)' && git pull --ff-only && ./install.sh || ./buddy-cli say \"The update didn't finish. See /tmp/buddy.update.log\""
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/python3")
-        p.arguments = ["-c", "import os,subprocess,sys; os.setsid(); subprocess.run(['/bin/sh','-c',sys.argv[1]], stdout=open(sys.argv[2],'w'), stderr=subprocess.STDOUT)",
+        // fork first: Process makes python a process-group leader, and a leader may not setsid (EPERM, seen 16 Oct)
+        p.arguments = ["-c", "import os,subprocess,sys\nif os.fork(): sys.exit(0)\nos.setsid(); subprocess.run(['/bin/sh','-c',sys.argv[1]], stdout=open(sys.argv[2],'w'), stderr=subprocess.STDOUT)",
                        cmd, "/tmp/buddy.update.log"]
         try? p.run()
+        showCard = false; bubble = nil   // the card would hide the bubble
         say("Updating to \(updateTo ?? "the new version")… back in a minute 🐾", .calm, seconds: 8, kind: .ambient)
     }
 }
