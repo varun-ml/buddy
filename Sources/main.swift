@@ -92,6 +92,18 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
             precondition(r.x == scr.maxX - sz.width - 10 && l.x == scr.minX + 10)
             precondition(r.y >= scr.minY + 10 && r.y + sz.height + 360 <= scr.maxY)
         }
+        // the open card: above the pet when it fits, else beside it; on screen, never over the pet, the pet never moves
+        for (card, left) in [(500.0, false), (800.0, false), (800.0, true), (2000.0, false)] as [(CGFloat, Bool)] {
+            let pet = NSRect(x: left ? 20 : 1300, y: 110, width: 100, height: 108), s = NSRect(x: 0, y: 0, width: 1512, height: 944)
+            let p = cardPlacement(card: card, cardWidth: 360, pet: pet, leftSide: left, in: s)
+            precondition(s.contains(p.frame) && p.beside == (card > 600), "card \(card): \(p.frame) beside \(p.beside)")
+            let petIn = NSRect(x: pet.minX, y: p.frame.minY + p.lift, width: 100, height: 108)
+            precondition(petIn == pet, "the pet moved: \(petIn) vs \(pet)")
+            if p.beside {
+                let cardRect = NSRect(x: left ? p.frame.minX + 100 + 6 : p.frame.minX, y: p.frame.minY, width: 360, height: p.frame.height)
+                precondition(!cardRect.intersects(pet.insetBy(dx: 8, dy: 8)), "card \(card) covers the pet")
+            }
+        }
         precondition(strollTarget(side: false, from: NSRect(x: 30, y: 40, width: 100, height: 108), in: scr, size: sz, roll: 1).y == 40)
     }
     // The "Merged!" bubble and the card disagreed (two counts); now the card's number is the only one.

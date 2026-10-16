@@ -96,7 +96,7 @@ extension Session {
 }
 extension Model {
     var pots: [Pot] { working.map { Pot(s: $0, done: false) } + yourTurn.map { Pot(s: $0, done: true) } }
-    var ignoredRed: [PR] { draftRed + staleRed }
+    var ignoredRed: [PR] { hiddenRed + draftRed + staleRed }
     /// Goal progress as k of n; a yes/no goal counts as 0 or 1 of 1.
     func progress(_ which: String) -> (k: Int, n: Int) {
         let g = goal(which)
@@ -164,13 +164,16 @@ struct PRBlock: View {
                 Circle().fill(Mood.upset.color).frame(width: 7, height: 7)
                 Text(pr.short).font(.system(size: 11, weight: .bold, design: T.design))
                 Text(pr.title).font(.system(size: 11, weight: .semibold, design: T.design)).lineLimit(1)
+                Spacer(minLength: 4)
+                if pr.needsYou && m.hiddenPRs[pr.id] != pr.sha {
+                    Button { m.hidePR(pr) } label: {
+                        Text("✕").font(.system(size: 10, weight: .bold)).foregroundColor(T.sub).padding(.horizontal, 4).contentShape(Rectangle())
+                    }.buttonStyle(.plain).help("Hide this PR until its next push")
+                }
             }
-            label("WHAT IT IS", pr.summary, lines: 2)
-            if let why = d?.why {
-                label("WHAT BROKE", why, lines: 3, color: Color(red: 1, green: 0.62, blue: 0.62))
-            } else {
-                label("WHAT BROKE", d == nil ? "reading the CI log…" : pr.failing.isEmpty ? "a check failed: Open PR shows which" : "✕ " + pr.failing.joined(separator: " · ✕ "), lines: 2, color: Color(red: 1, green: 0.62, blue: 0.62))
-            }
+            // one plain line: what failed (the PR's title above says what it is; Open PR has the rest)
+            Text(d?.why ?? (d == nil ? "reading the CI log…" : pr.failing.isEmpty ? "a check failed: Open PR shows which" : pr.failing.joined(separator: ", ") + " failed"))
+                .font(.system(size: 11, design: T.design)).foregroundColor(Color(red: 0.86, green: 0.36, blue: 0.36)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
             if let s = d?.session {
                 Text("Last worked on in \(s.codex ? "Codex · " : "")\((s.cwd as NSString).lastPathComponent) · \(ago(Date().timeIntervalSince(s.when))) ago")
                     .font(.system(size: 9.5, design: T.design)).foregroundColor(T.sub).lineLimit(1)
@@ -187,13 +190,6 @@ struct PRBlock: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 10).fill(T.fg.opacity(0.05)))
-    }
-
-    func label(_ k: String, _ v: String, lines: Int, color: Color = T.fg) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(k).font(.system(size: 8.5, weight: .bold, design: T.design)).kerning(0.8).foregroundColor(T.sub)
-            Text(v).font(.system(size: 11, design: T.design)).foregroundColor(color).lineLimit(lines).fixedSize(horizontal: false, vertical: true)
-        }
     }
 }
 

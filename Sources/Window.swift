@@ -137,109 +137,128 @@ struct PetView: View {
     @State private var petTimer: Timer?
 
     var body: some View {
-        VStack(alignment: m.leftSide ? .leading : .trailing, spacing: 6) {
-            Spacer(minLength: 0)
-            if m.showCard {
-                ScrollView(showsIndicators: false) {
-                    Card(m: m).fixedSize(horizontal: false, vertical: true)
-                        .background(GeometryReader { g in Color.clear.preference(key: CardHeight.self, value: g.size.height) })
+        Group {
+            if m.showCard && m.cardBeside {
+                // too little room above Buddy: the card stands beside it, on the side away from the screen edge, as tall as the
+                // screen allows. The pet keeps its spot: the window may reach below it, so the pet is lifted by petLift.
+                HStack(alignment: .bottom, spacing: 6) {
+                    if m.leftSide { pet.padding(.bottom, m.petLift); card } else { card; pet.padding(.bottom, m.petLift) }
                 }
-                .frame(maxHeight: m.cardHeight > 0 ? m.cardHeight : nil)
-                .overlay(alignment: m.leftSide ? .topTrailing : .topLeading) {
-                    // close the card now; bubbles held back while it was open come straight through. Hover opens it again.
-                    Button { m.closeCard(); m.sayNext() } label: {
-                        Image(systemName: "minus").font(.system(size: 9, weight: .bold)).foregroundColor(T.fg)
-                            .frame(width: 18, height: 18)
-                            .background(Circle().fill(T.solid))
-                            .overlay(Circle().stroke(T.sub.opacity(0.4), lineWidth: 0.5))
-                            .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
-                            .contentShape(Circle())
+            } else {
+                VStack(alignment: m.leftSide ? .leading : .trailing, spacing: 6) {
+                    Spacer(minLength: 0)
+                    if m.showCard {
+                        card
+                    } else if let b = m.bubble, !m.squatting {
+                        BubbleView(bubble: b, leftSide: m.leftSide, m: m)
+                            .onHover { m.holdBubble($0) }
+                            .onTapGesture { if b.kind != .quote && b.kind != .thought { b.action?(); m.bubble = nil; m.onExpandChange?() } }
                     }
-                    .buttonStyle(.plain).help("Close the card")
-                    .offset(x: m.leftSide ? 6 : -6, y: -6)   // on the corner away from the resize grip
+                    pet
                 }
-                .onPreferenceChange(CardHeight.self) { h in
-                    if abs(h - m.cardHeight) > 1 { m.cardHeight = h; m.onExpandChange?() }
-                    if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("card height \(Int(h))\n".data(using: .utf8)!) }
-                }
-                .onHover { cardHover = $0; settle() }
-                .padding(.bottom, -m.cardOverlap).zIndex(1)   // drawn over the pet when it needs the room
-            } else if let b = m.bubble, !m.squatting {
-                BubbleView(bubble: b, leftSide: m.leftSide, m: m)
-                    .onHover { m.holdBubble($0) }
-                    .onTapGesture { if b.kind != .quote && b.kind != .thought { b.action?(); m.bubble = nil; m.onExpandChange?() } }
             }
-            Group { if m.dancing { DanceView(m: m) } else { Cat(m: m) } }
-                .padding(.top, 20)
-                .overlay(alignment: .top) {   // CI weather: rain while a PR is red, sun after a merge
-                    if m.sunUntil > Date() { Text("☀️").font(.system(size: 18)) }
-                    else if !m.needsYouPRs.isEmpty { Text("🌧️").font(.system(size: 18)).help("\(m.needsYouPRs.count) red PR") }
-                }
-                .contentShape(Rectangle())
-                .onHover { h in
-                    catHover = h
-                    m.hovering = h
-                    settle()
-                    petTimer?.invalidate()
-                    if h { petTimer = Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in m.hearts += 1 } }
-                }
-                .contextMenu {
-                    // pet actions (docs/pet-actions-prd.md): the pet's verb, then what it means
-                    Button(m.stayPut ? "🐾 Walkies · roam again" : "🪑 Sit · stay in one spot") { m.toggleStayPut() }
-                    if m.breathing || m.snoozed { Button(m.breathing ? "End the break" : "☀️ Wake up") { m.toggleSnooze() } }
-                    else { Menu("💤 Nap · quiet for a while") {
-                        Button("30 minutes") { m.nap(30) }; Button("1 hour") { m.nap(60) }; Button("Until I wake it") { m.nap(nil) }
-                    } }
-                    Menu("🏠 Den · off the screen") {
-                        Button("30 minutes") { m.goToDen(30) }; Button("1 hour") { m.goToDen(60) }; Button("2 hours") { m.goToDen(120) }
-                    }
-                    Button((m.relaxing ? "✓ " : "") + "🌿 Lazy day · calm until midnight") { m.toggleRelax() }
-                    Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
-                    if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
-                    Divider()
-                    Button("🎲 Shuffle buddy") { m.shuffle() }
-                    Menu("Look") {
-                        Menu("Buddy") {
-                            ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
-                                Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }
-                            }
-                        }
-                        Menu("Costume") {
-                            ForEach(costumes, id: \.0) { c in
-                                Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
-                            }
-                        }
-                        Menu("Walk") {
-                            ForEach([("bottom", "Along the bottom"), ("side", "Up and down the side")], id: \.0) { w in
-                                Button((m.walk == w.0 ? "✓ " : "    ") + w.1) { m.setWalk(w.0) }
-                            }
-                        }
-                        Menu("Theme") {
-                            ForEach(["burrow", "glass", "ink"], id: \.self) { n in
-                                Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
-                            }
-                        }
-                    }
-                    Menu("Personal") {
-                        Button("Set goals…") { DispatchQueue.main.async { m.setGoals() } }
-                        Button("Add task…") { DispatchQueue.main.async { m.addTask() } }
-                        Button("Open task list") { openText(tasksPath) }
-                        Divider()
-                        Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
-                        Button((m.trackingSwitches ? "✓ " : "") + "Track app switching") { m.toggleSwitchTracking() }
-                        Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
-                    }
-                    if config["phone"] as? Bool == true { Button("📱 Pair phone…") { pairPhone() } }
-                    Divider()
-                    if let v = m.updateTo { Button("⬆️ Update Buddy to \(v)") { m.update() } }
-                    Button("Close Buddy") { NSApp.terminate(nil) }   // exit 0: launchd leaves it closed until next login
-                }
-                .onTapGesture(count: 2) { m.nextBreed() }
-                .onTapGesture { m.doGesture() }
-                .help("Hover for what needs you · click for a trick · double-click for a new breed · drag to move")
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: m.leftSide ? .bottomLeading : .bottomTrailing)
+    }
+
+    /// The card: measured at full height (CardHeight), scrolling only if even the whole screen is too short for it.
+    var card: some View {
+        ScrollView(showsIndicators: false) {
+            Card(m: m).fixedSize(horizontal: false, vertical: true)
+                .background(GeometryReader { g in Color.clear.preference(key: CardHeight.self, value: g.size.height) })
+        }
+        .frame(maxHeight: m.cardHeight > 0 ? m.cardHeight : nil)
+        .overlay(alignment: m.leftSide ? .topTrailing : .topLeading) {
+            // close the card now; bubbles held back while it was open come straight through. Hover opens it again.
+            Button { m.closeCard(); m.sayNext() } label: {
+                Image(systemName: "minus").font(.system(size: 9, weight: .bold)).foregroundColor(T.fg)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(T.solid))
+                    .overlay(Circle().stroke(T.sub.opacity(0.4), lineWidth: 0.5))
+                    .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain).help("Close the card")
+            .offset(x: m.leftSide ? 6 : -6, y: -6)   // on the corner away from the resize grip
+        }
+        .onPreferenceChange(CardHeight.self) { h in
+            if abs(h - m.cardHeight) > 1 { m.cardHeight = h; m.onExpandChange?() }
+            if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("card height \(Int(h))\n".data(using: .utf8)!) }
+        }
+        .onHover { cardHover = $0; settle() }
+    }
+
+    /// Bit, with its hover, menu and clicks.
+    var pet: some View {
+    Group { if m.dancing { DanceView(m: m) } else { Cat(m: m) } }
+        .padding(.top, 20)
+        .overlay(alignment: .top) {   // CI weather: rain while a PR is red, sun after a merge
+            if m.sunUntil > Date() { Text("☀️").font(.system(size: 18)) }
+            else if !m.needsYouPRs.isEmpty { Text("🌧️").font(.system(size: 18)).help("\(m.needsYouPRs.count) red PR") }
+        }
+        .contentShape(Rectangle())
+        .onHover { h in
+            catHover = h
+            m.hovering = h
+            settle()
+            petTimer?.invalidate()
+            if h { petTimer = Timer.scheduledTimer(withTimeInterval: 1.4, repeats: false) { _ in m.hearts += 1 } }
+        }
+        .contextMenu {
+            // pet actions (docs/pet-actions-prd.md): the pet's verb, then what it means
+            Button(m.stayPut ? "🐾 Walkies · roam again" : "🪑 Sit · stay in one spot") { m.toggleStayPut() }
+            if m.breathing || m.snoozed { Button(m.breathing ? "End the break" : "☀️ Wake up") { m.toggleSnooze() } }
+            else { Menu("💤 Nap · quiet for a while") {
+                Button("30 minutes") { m.nap(30) }; Button("1 hour") { m.nap(60) }; Button("Until I wake it") { m.nap(nil) }
+            } }
+            Menu("🏠 Den · off the screen") {
+                Button("30 minutes") { m.goToDen(30) }; Button("1 hour") { m.goToDen(60) }; Button("2 hours") { m.goToDen(120) }
+            }
+            Button((m.relaxing ? "✓ " : "") + "🌿 Lazy day · calm until midnight") { m.toggleRelax() }
+            Button((m.privacy ? "✓ " : "") + "🔒 Privacy mode") { m.togglePrivacy() }
+            if m.relaxing && !m.breathing { Button("Breathe for 2 minutes") { m.startBreak() } }
+            Divider()
+            Button("🎲 Shuffle buddy") { m.shuffle() }
+            Menu("Look") {
+                Menu("Buddy") {
+                    ForEach(pets.map(\.name) + ["random"], id: \.self) { n in
+                        Button((petChoice == n ? "✓ " : "    ") + n.capitalized) { m.setPet(n) }
+                    }
+                }
+                Menu("Costume") {
+                    ForEach(costumes, id: \.0) { c in
+                        Button(((costume ?? "none") == c.0 ? "✓ " : "    ") + c.1) { m.setCostume(c.0) }
+                    }
+                }
+                Menu("Walk") {
+                    ForEach([("bottom", "Along the bottom"), ("side", "Up and down the side")], id: \.0) { w in
+                        Button((m.walk == w.0 ? "✓ " : "    ") + w.1) { m.setWalk(w.0) }
+                    }
+                }
+                Menu("Theme") {
+                    ForEach(["burrow", "glass", "ink"], id: \.self) { n in
+                        Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
+                    }
+                }
+            }
+            Menu("Personal") {
+                Button("Set goals…") { DispatchQueue.main.async { m.setGoals() } }
+                Button("Add task…") { DispatchQueue.main.async { m.addTask() } }
+                Button("Open task list") { openText(tasksPath) }
+                Divider()
+                Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
+                Button((m.trackingSwitches ? "✓ " : "") + "Track app switching") { m.toggleSwitchTracking() }
+                Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
+            }
+            if config["phone"] as? Bool == true { Button("📱 Pair phone…") { pairPhone() } }
+            Divider()
+            if let v = m.updateTo { Button("⬆️ Update Buddy to \(v)") { m.update() } }
+            Button("Close Buddy") { NSApp.terminate(nil) }   // exit 0: launchd leaves it closed until next login
+        }
+        .onTapGesture(count: 2) { m.nextBreed() }
+        .onTapGesture { m.doGesture() }
+        .help("Hover for what needs you · click for a trick · double-click for a new breed · drag to move")
     }
 
     func settle() {
@@ -277,6 +296,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var flightFloor: CGFloat?                    // the hero's floor while it flies (Costume.swift)
     var heroLater: (Gesture, Date)?               // a flight that waits for a bubble or the card to close
     var homeY: CGFloat = 0
+    var petSpot: NSPoint?   // where the pet stands while the card is open (the window may then reach below or beside it)
+    var placed: NSRect?     // the frame resize() last set: if the window moved since (a drag), the pet moved with it
+    /// The pet's own 100×108 rectangle on screen, wherever the card is.
+    var petFrame: NSRect {
+        let f = panel.frame
+        if let s = petSpot { return NSRect(origin: s, size: small) }
+        return NSRect(x: model.leftSide ? f.minX : f.maxX - small.width, y: f.minY, width: small.width, height: small.height)
+    }
     var squatHoldUntil = Date.distantPast
     var forcedSquat = CommandLine.arguments.contains("--squat-now")          // the floor Bit walks on, restored after squatting
 
@@ -308,9 +335,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         blobCenter = { [weak self] in
             guard let self = self else { return .zero }
-            let f = self.panel.frame
-            let x = self.model.leftSide && self.model.expanded ? f.minX + 8 + 42 : f.maxX - 8 - 42
-            return CGPoint(x: x, y: f.minY + 8 + 36)
+            let f = self.petFrame
+            return CGPoint(x: f.minX + 8 + 42, y: f.minY + 8 + 36)
         }
         mouseInPet = { [weak self] in
             guard let self = self else { return false }
@@ -371,8 +397,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func placeLitter() {
         let n = model.waiting.count
         guard n > 0, !model.squatting else { if litter.isVisible { litter.orderOut(nil) }; return }
-        let w = CGFloat(n) * 36 + 8, f = panel.frame
-        let catX = model.leftSide && model.expanded ? f.minX + 8 : f.maxX - 8 - 84
+        let w = CGFloat(n) * 36 + 8, f = petFrame
+        let catX = f.minX + 8
         let x = catX - w >= screen.minX ? catX - w : catX + 84   // the side with room
         let want = NSRect(x: max(screen.minX, min(x, screen.maxX - w)), y: f.minY + 4, width: w, height: 50)
         if litter.frame != want { litter.setFrame(want, display: true) }   // runs 30×/s; touch the window only when it moves
@@ -448,13 +474,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let v = NSScreen.main!.visibleFrame
             panel.setFrameOrigin(NSPoint(x: v.maxX - panel.frame.width - 12, y: v.minY + 110))
         }
-        homeY = panel.frame.minY   // follow wherever you dragged Buddy
+        if let sp = petSpot, let pl = placed, panel.frame.origin != pl.origin {   // dragged with the card open: the pet went along
+            petSpot = NSPoint(x: sp.x + panel.frame.minX - pl.minX, y: sp.y + panel.frame.minY - pl.minY); placed = panel.frame
+        }
+        homeY = petFrame.minY   // follow wherever you dragged Buddy
         let idle = !m.expanded && !m.hovering && m.gesture == .none && m.mood != .asleep
         if idle && !m.stayPut && tick % 8 == 0 && Int.random(in: 0..<180) == 0 { m.doGesture() }   // ~every 90 s at 2 Hz   // a trick every ~90 s on average
         if m.zoomies && !m.stayPut {
             var f = panel.frame
             if m.walk == "side" {   // dash to the far end of the edge and back
-                let (low, high) = sideRange(in: screen, size: small, card: model.cardHeight)
+                let (low, high) = sideRange(in: screen, size: small)
                 if target == nil || abs((target ?? 0) - f.minY) < 8 || !(low...high).contains(target!) {   // a target left from walking the floor is an x
                     target = f.midY < (low + high) / 2 + small.height / 2 ? high : low
                 }
@@ -480,7 +509,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var f = panel.frame
         let pace: CGFloat = m.relaxing ? 0.7 : wearing == "diwali" && evening ? 0.9 : 1.3   // an amble in relax mode; careful steps with a lit diya
         if m.walk == "side" {
-            if sideTarget == nil { sideTarget = strollTarget(side: true, from: f, in: screen, size: small, card: model.cardHeight, roll: .random(in: 0...1)) }
+            if sideTarget == nil { sideTarget = strollTarget(side: true, from: f, in: screen, size: small, roll: .random(in: 0...1)) }
             let t = sideTarget!, dx = t.x - f.minX, dy = t.y - f.minY, d = hypot(dx, dy)
             if d < 2 { sideTarget = nil; return }
             if !m.walking { m.walking = true }
@@ -505,37 +534,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setFrameOrigin(f.origin)
     }
 
-    /// Grow the window away from the nearer screen edge, keeping the cat where it is.
+    /// Grow the window away from the nearer screen edge, keeping the cat where it is. The card opens above Buddy when it fits,
+    /// otherwise beside it (never over it, never with blocks dropped). `petSpot` remembers where the pet stood while the card is open.
     func resize() {
         let f = panel.frame
+        let spot = petSpot ?? NSPoint(x: model.leftSide || f.width <= small.width + 1 ? f.minX : f.maxX - small.width, y: f.minY)
         if f.width <= small.width + 1 { model.leftSide = f.midX < screen.midX }
-        var size = model.expanded && !model.squatting ? big : small
-        if !model.showCard && model.cardOverlap > 0 { model.cardOverlap = 0 }
-        if model.showCard && !model.squatting {
-            let want = (model.cardHeight > 0 ? model.cardHeight : big.height - small.height) + small.height + 22
-            let underCard: CGFloat = 6 + 20 + 72 + 8   // what sits below the card: stack spacing, the pet's top padding, the pet, the outer padding
-            let overlap = min(max(0, want - (screen.maxY - f.minY)), underCard)   // cover the pet, never push the card out of the window
-            if abs(model.cardOverlap - overlap) > 1 { model.cardOverlap = overlap }
-            size = NSSize(width: max(big.width, model.cardWidth + 30), height: min(want - overlap, screen.maxY - f.minY))
-            if CommandLine.arguments.contains("--card") { FileHandle.standardError.write("room for card \(Int(screen.maxY - f.minY - small.height - 22))\n".data(using: .utf8)!) }
+        guard model.showCard && !model.squatting else {
+            petSpot = nil
+            if model.cardBeside { model.cardBeside = false; model.petLift = 0 }
+            let size = model.expanded && !model.squatting ? big : small
+            panel.setFrame(NSRect(x: model.leftSide ? spot.x : spot.x + small.width - size.width, y: spot.y, width: size.width, height: size.height), display: true, animate: false)
+            return
         }
-        let x = model.leftSide ? f.minX : f.maxX - size.width
-        panel.setFrame(NSRect(x: x, y: f.minY, width: size.width, height: size.height), display: true, animate: false)
+        petSpot = spot
+        let card = model.cardHeight > 0 ? model.cardHeight : big.height - small.height, width = max(big.width, model.cardWidth + 30)
+        let p = cardPlacement(card: card, cardWidth: width, pet: NSRect(origin: spot, size: small), leftSide: model.leftSide, in: screen)
+        if model.cardBeside != p.beside { model.cardBeside = p.beside }
+        if abs(model.petLift - p.lift) > 1 { model.petLift = p.lift }
+        panel.setFrame(p.frame, display: true, animate: false); placed = p.frame
     }
 }
 
-/// How high up the side edge Buddy strolls: from just above the bottom to low enough that the whole card,
-/// which opens above Buddy, still fits (it may cover the pet). `card` is the card's last measured height (0 before it first opens).
-func sideRange(in s: NSRect, size: NSSize, card: CGFloat = 0) -> (low: CGFloat, high: CGFloat) {
+/// Where the open card goes. Above the pet when the whole card fits there; otherwise beside it, on the side away from the
+/// screen edge, as tall as the screen allows and reaching below the pet if it must (`lift` raises the pet back to its spot).
+/// The pet's rectangle never changes and the card never covers it. Selftested.
+func cardPlacement(card: CGFloat, cardWidth: CGFloat, pet: NSRect, leftSide: Bool, in s: NSRect) -> (frame: NSRect, beside: Bool, lift: CGFloat) {
+    let above = card + pet.height + 22   // the card, the stack spacing, the pet, the outer padding
+    if pet.minY + above <= s.maxY {
+        return (NSRect(x: leftSide ? pet.minX : pet.maxX - cardWidth, y: pet.minY, width: cardWidth, height: above), false, 0)
+    }
+    let h = min(card + 16, s.height)                      // the card plus the outer padding, at most the whole screen
+    let y = max(s.minY, min(pet.minY, s.maxY - h))         // as low as it must go, never off the screen
+    let lift = pet.minY - y
+    let w = cardWidth + 6 + pet.width
+    return (NSRect(x: leftSide ? pet.minX : pet.maxX - w, y: y, width: w, height: max(h, lift + pet.height)), true, lift)
+}
+
+/// How high up the side edge Buddy strolls: from just above the bottom to low enough that the card,
+/// which opens above Buddy, still has room for its main blocks.
+func sideRange(in s: NSRect, size: NSSize) -> (low: CGFloat, high: CGFloat) {
     let low = s.minY + 10
-    return (low, max(low, s.maxY - size.height - max(360, card - size.height)))   // the open card may cover the pet itself
+    return (low, max(low, s.maxY - size.height - 360))
 }
 
 /// Where to stroll next, `roll` in 0…1. Along the bottom: anywhere across, at the current height.
 /// Up and down the side: on the nearer side edge, anywhere in `sideRange`. Selftested.
-func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, card: CGFloat = 0, roll: CGFloat) -> CGPoint {
+func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, roll: CGFloat) -> CGPoint {
     guard side else { return CGPoint(x: s.minX + 10 + roll * (s.width - size.width - 20), y: f.minY) }
-    let (low, high) = sideRange(in: s, size: size, card: card)
+    let (low, high) = sideRange(in: s, size: size)
     return CGPoint(x: f.midX < s.midX ? s.minX + 10 : s.maxX - size.width - 10, y: low + roll * (high - low))
 }
 

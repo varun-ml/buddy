@@ -61,7 +61,8 @@ final class Model: ObservableObject {
     @Published var facingLeft = true
     @Published var leftSide = false
     @Published var cardHeight: CGFloat = 0   // the card's full height, so the window can fit all of it
-    @Published var cardOverlap: CGFloat = 0  // too little room above Buddy: the open card covers the pet by this much instead of being cut off
+    @Published var cardBeside = false        // too little room above Buddy: the card opens beside it (Window.cardPlacement)
+    @Published var petLift: CGFloat = 0     // …and the window reaches below the pet by this much, so the pet is lifted back to its spot
     @Published var cardWidth: CGFloat = { let w = UserDefaults.standard.double(forKey: "bit.cardWidth"); return w >= 300 ? w : 330 }() {
         didSet { UserDefaults.standard.set(Double(cardWidth), forKey: "bit.cardWidth") }
     }
@@ -282,7 +283,16 @@ final class Model: ObservableObject {
     var working: [Session] { sessions.filter { $0.state == "working" && !isStuck($0) } }
     /// Finished in the last hour: the ball is in your court.
     var yourTurn: [Session] { sessions.filter { $0.state == "finished" && Date().timeIntervalSince1970 - $0.ts < 3600 } }
-    var needsYouPRs: [PR] { prs.filter(\.needsYou) }
+    var needsYouPRs: [PR] { prs.filter { $0.needsYou && hiddenPRs[$0.id] != $0.sha } }
+    /// Red PRs you hid with ✕ on their card: out of the way until the next push (a new commit that is still red comes back).
+    var hiddenRed: [PR] { prs.filter { $0.needsYou && hiddenPRs[$0.id] == $0.sha } }
+    var hiddenPRs: [String: String] { UserDefaults.standard.dictionary(forKey: "bit.hiddenPRs") as? [String: String] ?? [:] }
+    func hidePR(_ pr: PR) {
+        var h = hiddenPRs.filter { id, _ in prs.contains { $0.id == id } }   // forget PRs that closed
+        h[pr.id] = pr.sha
+        UserDefaults.standard.set(h, forKey: "bit.hiddenPRs")
+        objectWillChange.send(); onExpandChange?()
+    }
     var draftRed: [PR] { prs.filter { $0.ci == "red" && $0.isDraft && $0.recent } }
     var staleRed: [PR] { prs.filter { $0.ci == "red" && !$0.recent } }
     var badge: Int { waiting.count + stuck.count + needsYouPRs.count }
