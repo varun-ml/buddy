@@ -273,6 +273,12 @@ if CommandLine.arguments.contains("--dump") {
     exit(0)
 }
 
+// One Buddy at a time. Two copies share the same files and settings, keep waking each other, and each used ~50% CPU (16 Oct).
+// The lock goes with the process, so a crash never leaves it stuck. launchd doesn't restart a clean exit (SuccessfulExit false).
+try? FileManager.default.createDirectory(atPath: home + "/.claude/pet", withIntermediateDirectories: true)
+let oneBuddy = open(home + "/.claude/pet/buddy.lock", O_CREAT | O_RDWR, 0o644)
+if oneBuddy >= 0 && flock(oneBuddy, LOCK_EX | LOCK_NB) != 0 { print("Buddy is already running."); exit(0) }
+
 let app = NSApplication.shared
 let delegate = AppDelegate()
 app.delegate = delegate
