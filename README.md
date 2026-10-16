@@ -166,6 +166,12 @@ You pair once. After that the app updates itself: when the Mac has a newer build
 
 Talking back to your sessions comes later. For now, answer them in Claude's own app (Remote Control).
 
+## Updates
+
+When a new version of Buddy is released, Buddy says so once, and right-click shows **⬆️ Update Buddy to v1.x**. Click it and Buddy updates itself the same way you would by hand (`git pull` in its folder, then `./install.sh`) and is back in about a minute. If the folder has your own changes, nothing is overwritten: Buddy keeps running and tells you the update didn't finish (details in `/tmp/buddy.update.log`).
+
+Buddy checks a minute after it starts and every 6 hours, with one read-only request to GitHub (`git ls-remote`). `"updates": false` in `~/.config/buddy.json` turns the check off.
+
 ## Settings
 
 All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `buddy`).
@@ -191,6 +197,7 @@ All optional, in `~/.config/buddy.json`. Restart Buddy after editing (type `budd
 | `stop` | When your workday ends (default 20:00). Buddy yawns and offers a note for tomorrow. |
 | `breakMins` | Minutes without a break before the nudge (default 90). Quiet while your mic is on. |
 | `juggle` | How many agents at once before Buddy suggests finishing one (default 5) |
+| `updates` | `false` stops Buddy checking GitHub for new releases (default on) |
 | `stayPut` | `true` makes Buddy sit in one spot instead of strolling (default off). Same as right-click → *Sit*, which overrides it |
 | `claudeLimits` | Show your Claude plan usage (default off; see *What it asks permission for*) |
 | `switchesPerHour` | App switches in an hour before Buddy suggests calming down (default 120; needs switch tracking on) |

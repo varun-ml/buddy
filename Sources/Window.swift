@@ -230,6 +230,7 @@ struct PetView: View {
                     }
                     if config["phone"] as? Bool == true { Button("📱 Pair phone…") { pairPhone() } }
                     Divider()
+                    if let v = m.updateTo { Button("⬆️ Update Buddy to \(v)") { m.update() } }
                     Button("Close Buddy") { NSApp.terminate(nil) }   // exit 0: launchd leaves it closed until next login
                 }
                 .onTapGesture(count: 2) { m.nextBreed() }
@@ -319,6 +320,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.loadSessions()
         model.loadPRs()
         Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in self?.model.loadSessions() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in self?.model.checkForUpdate() }   // a new release? (Update.swift)
+        Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.model.checkForUpdate() }
         Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in self?.model.loadPRs() }
         model.loadStats()
         model.anotherQuote()   // so the wisdom box is never empty

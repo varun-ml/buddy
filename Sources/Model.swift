@@ -41,6 +41,7 @@ final class Model: ObservableObject {
     @Published var snoozedUntil: Date? = (UserDefaults.standard.object(forKey: "bit.nap") as? Date).flatMap { $0 > Date() ? $0 : nil }
     /// Den: off the screen until this time (at most 2 h). Saved for the same reason: a crash mid-demo must not bring Buddy back.
     @Published var denUntil: Date? = (UserDefaults.standard.object(forKey: "bit.den") as? Date).flatMap { $0 > Date() ? $0 : nil }
+    @Published var updateTo: String?   // a newer release on GitHub (Update.swift)
     var inDen: Bool { (denUntil ?? .distantPast) > Date() }
     @Published var shake = 0
     @Published var celebrate = 0

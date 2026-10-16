@@ -61,6 +61,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     pa.bubble = nil; pa.denUntil = Date().addingTimeInterval(60); pa.say("b wants your OK", .waiting); pa.sayNext(); precondition(pa.bubble == nil && pa.inDen)
     pa.denUntil = Date().addingTimeInterval(-1); pa.petActionsTick(); precondition(!pa.inDen && pa.bubble?.text.hasPrefix("Back from") == true)
     pa.bubble = nil; pa.sayNext(); precondition(pa.bubble?.text == "b wants your OK")
+    precondition(newerTag(local: "v1.2.0", remote: ["v1.1.9", "v1.10.0", "v1.3.0", "latest"]) == "v1.10.0")   // numbers, not text: 1.10 > 1.3
+    precondition(newerTag(local: "v1.3", remote: ["v1.3.0", "v1.2.9"]) == nil && newerTag(local: nil, remote: ["v1.0.0"]) == "v1.0.0")
+    precondition(newerTag(local: "v2.0.0", remote: []) == nil && newerTag(local: "v1.0.0", remote: ["nightly", "v1.0.1"]) == "v1.0.1")
     precondition(pets.allSatisfy { $0.den != "my den" } && Set(pets.map(\.den)).count == pets.count)   // every buddy has its own den
     var good = Stats(); good.me = "me"; good.merged = 4; good.team = [("ana", 9)]; good.teamTotal = 12   // a failed GitHub call keeps the last good numbers
     let kept = keepGood(Stats(), old: good, okMe: false, okTeam: false)
