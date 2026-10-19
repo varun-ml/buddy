@@ -147,7 +147,10 @@ enum Day {
 }
 
 /// True while any app is recording from the default microphone (a call, a huddle, dictation). Needs no permission.
+/// Tests set this: the real microphone (a call, dictation) must not change what the selftest sees.
+var micInUseOverride: Bool?
 func micInUse() -> Bool {
+    if let o = micInUseOverride { return o }
     var dev = AudioDeviceID(0), size = UInt32(MemoryLayout<AudioDeviceID>.size)
     var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
     guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &addr, 0, nil, &size, &dev) == noErr else { return false }

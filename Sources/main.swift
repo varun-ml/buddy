@@ -11,6 +11,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     // in memory only, so nothing you saved is touched.
     UserDefaults.standard.setVolatileDomain(["bit.relax": Date.distantPast, "bit.nap": Date.distantPast, "bit.den": Date.distantPast, "bit.privacy": false, "bit.switchTracking": false,
                                              "bit.ignored": [String: Double](), "bit.breed": 0], forName: UserDefaults.argumentDomain)
+    micInUseOverride = false   // a call or dictation running during ./check.sh silenced "Back from my den" and failed the den check (16 and 19 Oct)
     precondition(dayMonth("14 Feb") == "14 Feb" && dayMonth("Feb 14") == "14 Feb" && dayMonth("14/02") == "14 Feb" && dayMonth("2019-02-14") == "14 Feb" && dayMonth("June 3") == "3 Jun")
     precondition(dayMonth("banana") == nil)
     // Buddy stuck behind the menu bar (12 Oct: 10 pt of 108 showing) must count as lost; a normal spot must not
