@@ -285,11 +285,7 @@ def main():
     if (d.get('cwd') or '').startswith(os.path.expanduser('~/.config/buddy')):
         return   # Buddy's own Claude call (gift ideas), not a session of yours
     asked = (d.get('prompt') or '').strip()
-    skip = os.path.join(DIR, sid + '.skip')   # a session we decided isn't yours: its later events (Stop, tools) carry no prompt to tell
-    if asked.startswith('This is an app-generated request'):   # the ChatGPT app drafting a next message for you
-        open(skip, 'w').close()
-        return
-    if os.path.exists(skip):
+    if asked.startswith('This is an app-generated request'):   # the ChatGPT app drafting a next message for you (never sets promptedAt)
         return
     if '## My request' in asked:   # Codex desktop puts attached files first
         asked = asked.split('## My request', 1)[1].lstrip(': \n')

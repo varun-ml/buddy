@@ -59,8 +59,9 @@ hook(session_id='x3', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_p
 assert session('codex-x2') is None and session('codex-x3') is None
 # the ChatGPT app drafting a suggested next message (it can arrive with no Codex transcript) is not a session
 hook(session_id='x4', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='This is an app-generated request for a suggested next user message.\nContext: ## My request: fix tests')
-hook(session_id='x4', hook_event_name='Stop', cwd=WORK)   # its later events carry no prompt: still not a session
 assert session('x4') is None and session('codex-x4') is None
+hook(session_id='x4', hook_event_name='Stop', cwd=WORK)   # a later prompt-less event may still record it, but it never counts as prompted
+assert 'promptedAt' not in (session('x4') or {})
 # a script's `codex exec` run is shown but marked headless, so it doesn't count as a session you're juggling
 tpx = os.path.join(cx, 'exec.jsonl'); open(tpx, 'w').write(json.dumps({'type': 'session_meta', 'payload': {'originator': 'codex_exec'}}) + '\n')
 hook(session_id='x5', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tpx, prompt='review the diff')

@@ -634,10 +634,6 @@ final class Model: ObservableObject {
         let now = Date().timeIntervalSince1970
         var out: [Session] = []
         let ig = ignored
-        for f in (try? fm.contentsOfDirectory(atPath: sessionsDir)) ?? [] where f.hasSuffix(".skip") {   // beat.py's "not your session" markers
-            let p = (sessionsDir as NSString).appendingPathComponent(f)
-            if let m = (try? fm.attributesOfItem(atPath: p))?[.modificationDate] as? Date, Date().timeIntervalSince(m) > forgetAfter { try? fm.removeItem(atPath: p) }
-        }
         for f in (try? fm.contentsOfDirectory(atPath: sessionsDir)) ?? [] where f.hasSuffix(".json") {
             let p = (sessionsDir as NSString).appendingPathComponent(f)
             guard let data = fm.contents(atPath: p), let s = try? JSONDecoder().decode(Session.self, from: data) else { continue }
