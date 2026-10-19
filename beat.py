@@ -230,7 +230,9 @@ class Codex(Claude):
 
     def headless(self, d):
         try:
-            return json.loads(open(d.get('transcript_path') or '').readline())['payload'].get('originator') == 'codex_exec'
+            p = json.loads(open(d.get('transcript_path') or '').readline())['payload']
+            src = p.get('source')
+            return p.get('originator') == 'codex_exec' or isinstance(src, dict) and 'subagent' in src   # a script, or Codex's own helper
         except Exception:
             return False
 
@@ -283,9 +285,15 @@ def main():
     if (d.get('cwd') or '').startswith(os.path.expanduser('~/.config/buddy')):
         return   # Buddy's own Claude call (gift ideas), not a session of yours
     asked = (d.get('prompt') or '').strip()
+    skip = os.path.join(DIR, sid + '.skip')   # a session we decided isn't yours: its later events (Stop, tools) carry no prompt to tell
+    if asked.startswith('This is an app-generated request'):   # the ChatGPT app drafting a next message for you
+        open(skip, 'w').close()
+        return
+    if os.path.exists(skip):
+        return
     if '## My request' in asked:   # Codex desktop puts attached files first
         asked = asked.split('## My request', 1)[1].lstrip(': \n')
-    if agent.ignore(d, asked) or asked.startswith('This is an app-generated request'):   # the ChatGPT app drafting a next message for you
+    if agent.ignore(d, asked):
         return
     path = os.path.join(DIR, sid + '.json')
     if ev == 'SessionEnd':
@@ -312,6 +320,7 @@ def main():
             s['headless'] = True   # a script's run (codex exec): shown, but not a session you're juggling
         if asked and not asked.startswith('<'):   # skip injected <task-notification> etc.
             s['prompt'] = asked.replace('\n', ' ')[:90]
+            s['promptedAt'] = time.time()   # you typed: a background task finishing or a /loop tick doesn't count
         try:
             s['branch'] = subprocess.run(['git', '-C', cwd, 'branch', '--show-current'],
                                          capture_output=True, text=True, timeout=2).stdout.strip()

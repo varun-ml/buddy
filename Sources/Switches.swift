@@ -77,5 +77,5 @@ extension Model {
 /// Sessions you prompted since `since`: a script's runs (`codex exec`) don't count, and neither do the ChatGPT app's
 /// drafted next messages that older Buddy versions recorded (they had inflated "jumped between N sessions" 4x). Selftested.
 func sessionsTouched(_ sessions: [Session], since: Double) -> Int {
-    sessions.filter { ($0.turnStart ?? 0) > since && $0.headless != true && !($0.prompt ?? "").hasPrefix("This is an app-generated request") }.count
+    sessions.filter { ($0.promptedAt ?? 0) > since && $0.headless != true && !($0.prompt ?? "").hasPrefix("This is an app-generated request") }.count
 }

@@ -58,13 +58,20 @@ hook(session_id='x2', hook_event_name='UserPromptSubmit', transcript_path=tp, pr
 hook(session_id='x3', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tp, prompt='You are an expert reviewer')
 assert session('codex-x2') is None and session('codex-x3') is None
 # the ChatGPT app drafting a suggested next message (it can arrive with no Codex transcript) is not a session
-hook(session_id='x4', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='This is an app-generated request for a suggested next user message.')
+hook(session_id='x4', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='This is an app-generated request for a suggested next user message.\nContext: ## My request: fix tests')
+hook(session_id='x4', hook_event_name='Stop', cwd=WORK)   # its later events carry no prompt: still not a session
 assert session('x4') is None and session('codex-x4') is None
 # a script's `codex exec` run is shown but marked headless, so it doesn't count as a session you're juggling
 tpx = os.path.join(cx, 'exec.jsonl'); open(tpx, 'w').write(json.dumps({'type': 'session_meta', 'payload': {'originator': 'codex_exec'}}) + '\n')
 hook(session_id='x5', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tpx, prompt='review the diff')
 s = session('codex-x5'); assert s['headless'] is True and s['source'] == 'codex-cli', s
 assert 'headless' not in session('codex-x1')
+tps = os.path.join(cx, 'guardian.jsonl'); open(tps, 'w').write(json.dumps({'type': 'session_meta', 'payload': {'originator': 'Codex Desktop', 'source': {'subagent': {'other': 'guardian'}}}}) + '\n')
+hook(session_id='x6', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tps, prompt='check this')
+assert session('codex-x6')['headless'] is True
+# a background task finishing turns the session over, but you didn't prompt it
+hook(session_id='c9', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='<task-notification>done</task-notification>')
+s = session('c9'); assert 'promptedAt' not in s and 'turnStart' in s, s
 # Buddy's own Claude call (gift ideas)
 hook(session_id='b1', hook_event_name='UserPromptSubmit', cwd=os.path.expanduser('~/.config/buddy'), prompt='ideas')
 assert session('b1') is None

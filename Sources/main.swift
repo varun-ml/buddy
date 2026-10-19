@@ -68,7 +68,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(ciColor("FAILURE", failing: ["tsc"]) == "red" && ciColor("FAILURE", failing: []) == "pending" && ciColor("FAILURE", failing: [], unread: true) == "red" && ciColor("SUCCESS", failing: []) == "green" && ciColor("PENDING", failing: []) == "pending")   // cancelled-only is not red
     do {   // "jumped between N sessions": only sessions you prompted
         let t = Date().timeIntervalSince1970
-        func mk(_ id: String, _ h: Bool?, _ p: String) -> Session { Session(id: id, cwd: "/x", repo: "r", branch: nil, state: "finished", activity: "", prompt: p, ts: t, turnStart: t - 60, headless: h) }
+        func mk(_ id: String, _ h: Bool?, _ p: String) -> Session { Session(id: id, cwd: "/x", repo: "r", branch: nil, state: "finished", activity: "", prompt: p, ts: t, turnStart: t - 60, headless: h, promptedAt: t - 60) }
         precondition(sessionsTouched([mk("a", nil, "fix it"), mk("b", true, "review"), mk("c", nil, "This is an app-generated request for a suggested next user message")], since: t - 7200) == 1)
     }
     var good = Stats(); good.me = "me"; good.merged = 4; good.team = [("ana", 9)]; good.teamTotal = 12   // a failed GitHub call keeps the last good numbers
