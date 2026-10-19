@@ -66,6 +66,11 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(newerTag(local: "v2.0.0", remote: []) == nil && newerTag(local: "v1.0.0", remote: ["nightly", "v1.0.1"]) == "v1.0.1")
     precondition(pets.allSatisfy { $0.den != "my den" } && Set(pets.map(\.den)).count == pets.count)   // every buddy has its own den
     precondition(ciColor("FAILURE", failing: ["tsc"]) == "red" && ciColor("FAILURE", failing: []) == "pending" && ciColor("FAILURE", failing: [], unread: true) == "red" && ciColor("SUCCESS", failing: []) == "green" && ciColor("PENDING", failing: []) == "pending")   // cancelled-only is not red
+    do {   // "jumped between N sessions": only sessions you prompted
+        let t = Date().timeIntervalSince1970
+        func mk(_ id: String, _ h: Bool?, _ p: String) -> Session { Session(id: id, cwd: "/x", repo: "r", branch: nil, state: "finished", activity: "", prompt: p, ts: t, turnStart: t - 60, headless: h) }
+        precondition(sessionsTouched([mk("a", nil, "fix it"), mk("b", true, "review"), mk("c", nil, "This is an app-generated request for a suggested next user message")], since: t - 7200) == 1)
+    }
     var good = Stats(); good.me = "me"; good.merged = 4; good.team = [("ana", 9)]; good.teamTotal = 12   // a failed GitHub call keeps the last good numbers
     let kept = keepGood(Stats(), old: good, okMe: false, okTeam: false)
     precondition(kept.merged == 4 && kept.teamTotal == 12 && kept.team.count == 1 && keepGood(Stats(), old: good, okMe: true, okTeam: true).teamTotal == 0)

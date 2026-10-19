@@ -57,6 +57,14 @@ assert session('codex-x1') is not None   # Codex ends a session when a thread un
 hook(session_id='x2', hook_event_name='UserPromptSubmit', transcript_path=tp, prompt='hi')
 hook(session_id='x3', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tp, prompt='You are an expert reviewer')
 assert session('codex-x2') is None and session('codex-x3') is None
+# the ChatGPT app drafting a suggested next message (it can arrive with no Codex transcript) is not a session
+hook(session_id='x4', hook_event_name='UserPromptSubmit', cwd=WORK, prompt='This is an app-generated request for a suggested next user message.')
+assert session('x4') is None and session('codex-x4') is None
+# a script's `codex exec` run is shown but marked headless, so it doesn't count as a session you're juggling
+tpx = os.path.join(cx, 'exec.jsonl'); open(tpx, 'w').write(json.dumps({'type': 'session_meta', 'payload': {'originator': 'codex_exec'}}) + '\n')
+hook(session_id='x5', hook_event_name='UserPromptSubmit', cwd=WORK, transcript_path=tpx, prompt='review the diff')
+s = session('codex-x5'); assert s['headless'] is True and s['source'] == 'codex-cli', s
+assert 'headless' not in session('codex-x1')
 # Buddy's own Claude call (gift ideas)
 hook(session_id='b1', hook_event_name='UserPromptSubmit', cwd=os.path.expanduser('~/.config/buddy'), prompt='ideas')
 assert session('b1') is None

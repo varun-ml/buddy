@@ -64,7 +64,7 @@ extension Model {
             say("You switched apps \(h.n) times in the last hour." + tame, .calm, seconds: 20, kind: .ambient)
             return true
         }
-        let touched = sessions.filter { ($0.turnStart ?? 0) > now.timeIntervalSince1970 - 2 * 3600 }.count
+        let touched = sessionsTouched(sessions, since: now.timeIntervalSince1970 - 2 * 3600)
         if touched >= (config["sessionsPer2h"] as? Int ?? 6) {
             lastSwitchNudge = now
             say("You've jumped between \(touched) agent sessions in 2 hours. Finish two before you start another?", .calm, seconds: 20, kind: .ambient)
@@ -72,4 +72,10 @@ extension Model {
         }
         return false
     }
+}
+
+/// Sessions you prompted since `since`: a script's runs (`codex exec`) don't count, and neither do the ChatGPT app's
+/// drafted next messages that older Buddy versions recorded (they had inflated "jumped between N sessions" 4x). Selftested.
+func sessionsTouched(_ sessions: [Session], since: Double) -> Int {
+    sessions.filter { ($0.turnStart ?? 0) > since && $0.headless != true && !($0.prompt ?? "").hasPrefix("This is an app-generated request") }.count
 }

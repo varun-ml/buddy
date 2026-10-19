@@ -188,6 +188,10 @@ class Claude:
     def source(self, d, s):
         return None           # None = Claude Code, for sessions recorded before agents had names
 
+    def headless(self, d):
+        """Started by a script, not typed by you (`codex exec`)."""
+        return False
+
     def asking(self, d, what):
         """(state, activity) for a permission request."""
         return 'waiting', f'{self.label} wants to run: ' + what
@@ -223,6 +227,12 @@ class Codex(Claude):
             return 'codex-desktop' if 'Desktop' in json.loads(first)['payload'].get('originator', '') else 'codex-cli'
         except Exception:
             return 'codex-cli'
+
+    def headless(self, d):
+        try:
+            return json.loads(open(d.get('transcript_path') or '').readline())['payload'].get('originator') == 'codex_exec'
+        except Exception:
+            return False
 
     def asking(self, d, what):
         if auto_reviewed(d.get('transcript_path') or ''):   # Codex's own reviewer decides; you're never asked
@@ -275,7 +285,7 @@ def main():
     asked = (d.get('prompt') or '').strip()
     if '## My request' in asked:   # Codex desktop puts attached files first
         asked = asked.split('## My request', 1)[1].lstrip(': \n')
-    if agent.ignore(d, asked):
+    if agent.ignore(d, asked) or asked.startswith('This is an app-generated request'):   # the ChatGPT app drafting a next message for you
         return
     path = os.path.join(DIR, sid + '.json')
     if ev == 'SessionEnd':
@@ -298,6 +308,8 @@ def main():
 
     if ev == 'UserPromptSubmit':
         s.update(state='working', activity='thinking', turnStart=time.time())
+        if agent.headless(d):
+            s['headless'] = True   # a script's run (codex exec): shown, but not a session you're juggling
         if asked and not asked.startswith('<'):   # skip injected <task-notification> etc.
             s['prompt'] = asked.replace('\n', ' ')[:90]
         try:
