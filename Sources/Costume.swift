@@ -9,8 +9,14 @@ var costume: String? = {
     let c = UserDefaults.standard.string(forKey: "bit.costume") ?? config["costume"] as? String
     return c == "none" ? nil : c
 }()
-/// What the pet has on right now: your pick, or the festival's (Festive.swift).
-var wearing: String? { costume == "off" || petKind.biped ? nil : costume ?? festival() }
+/// What the pet has on right now: your pick, or the festival's (Festive.swift). A festival outfit you picked is worn only in
+/// its season: picking Pujo in October must not leave the drape on in December (23 Oct).
+var wearing: String? { costume == "off" || petKind.biped ? nil : inSeason(costume, today: festival()) ?? festival() }
+/// `pick`, unless it's a festival costume whose festival isn't on today. Selftested.
+func inSeason(_ pick: String?, today: String?) -> String? {
+    guard let p = pick, festivals.contains(where: { $0.costume == p }) else { return pick }
+    return p == today ? p : nil
+}
 var hero: Bool { wearing == "hero" }
 let costumes = [("none", "Automatic (dresses up for festivals)"), ("hero", "Caped hero"), ("durga", "Pujo"), ("diwali", "Diwali"), ("off", "No costume, ever")]
 
