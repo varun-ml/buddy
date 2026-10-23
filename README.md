@@ -66,7 +66,7 @@ Right-click Buddy → **Look** → **Costume** dresses the cat, pug or bear (the
 <p align="center"><img src="docs/costumes.png" width="900" alt="Costumes: a cat as a caped hero and its hero landing, a pug in a Pujo drape playing the dhak, a bear in a Diwali kurta waving a phuljhari"></p>
 
 - **Caped hero:** a cape and mask. It glides instead of walking, does a hero landing when you merge, flies off the screen when a PR breaks, and now and then grapples up to the top of your screen.
-- **Pujo** and **Diwali** switch on by themselves from a week before the festival days to three days after. Pujo: a red-bordered drape and kash flowers; it plays the dhak when an agent finishes and does a dhunuchi dance when you merge. Diwali: a kurta and marigold garland; it lights diyas, waves a phuljhari, and carries a diya after dark.
+- **Pujo** and **Diwali** switch on by themselves from a week before the festival days to the last of them (Bijoya Dashami, Bhai Dooj). Pujo: a red-bordered drape and kash flowers; it plays the dhak when an agent finishes and does a dhunuchi dance when you merge. Diwali: a kurta and marigold garland; it lights diyas, waves a phuljhari, and carries a diya after dark.
 - Pick a costume yourself, or *No costume, ever*, and it won't dress up on its own.
 
 ## Lazy day

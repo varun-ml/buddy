@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-// MARK: festivals. Buddy dresses up on its own from a week before the festival days to three days after,
+// MARK: festivals. Buddy dresses up on its own from a week before the festival days to the last of them,
 // unless you've picked a costume (right-click → Costume). Pujo and Diwali are costumes like the hero (Costume.swift).
 // Respect: no deities or rituals drawn on the pet; culture only: the dhak, dhunuchi smoke, diyas, rangoli.
 
@@ -22,7 +22,7 @@ let festivalGreetings: [String: String] = [
 func shiftDay(_ day: String, _ n: Int) -> String {
     isoDay.date(from: day).flatMap { Calendar.current.date(byAdding: .day, value: n, to: $0) }.map { isoDay.string(from: $0) } ?? day
 }
-let festivalWindows = festivals.map { (costume: $0.costume, from: shiftDay($0.from, -7), to: shiftDay($0.to, 3)) }
+let festivalWindows = festivals.map { (costume: $0.costume, from: shiftDay($0.from, -7), to: $0.to) }   // ends on the last day: after Dashami the dhak feels stale (23 Oct)
 var festivalCache = (at: Date.distantPast, name: String?.none)
 /// The festival costume for that day, if any. Asked many times a frame, so today's answer is kept for a minute.
 func festival(on d: Date? = nil) -> String? {

@@ -36,9 +36,9 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(sx.agent.label == "Claude" && Session(id: "x", ts: 0, source: "codex-cli").agent.label == "Codex" && Session(id: "x", ts: 0, source: "cursor").agent.label == "Claude")
     precondition(Set(pets.map(\.name)).count == pets.count && pets.allSatisfy { !$0.coats.isEmpty && !$0.tricks.isEmpty })   // every pet: a unique name, coats, tricks
     precondition(ease(0) == 0 && ease(1) == 1 && ease(2) == 1 && costumeMotion(.heroLanding, 0.45).y < 0 && costumeMotion(.heroLanding, 2) == (0, 1, 0))   // the hero lands back on the floor
-    let fd = { (d: String) in festival(on: isoDay.date(from: d)!) }   // a week before the festival days to three days after
-    precondition(fd("2026-10-09") == nil && fd("2026-10-10") == "durga" && fd("2026-10-24") == "durga" && fd("2026-10-25") == nil)
-    precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-14") == "diwali" && fd("2026-11-15") == nil)
+    let fd = { (d: String) in festival(on: isoDay.date(from: d)!) }   // a week before the festival days to the last of them
+    precondition(fd("2026-10-09") == nil && fd("2026-10-10") == "durga" && fd("2026-10-21") == "durga" && fd("2026-10-22") == nil)
+    precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-11") == "diwali" && fd("2026-11-12") == nil)
     precondition(breath(0) == (0, true) && abs(breath(3.99).fill - 1) < 0.01 && !breath(5).inhaling && breath(9.99).fill < 0.01 && breath(10) == (0, true))   // 4 s in, 6 s out
     precondition(Set((0..<pets.count).map { randomPet(day: $0) }) == Set(shufflePool))   // random visits every buddy in the pool
     let t0 = switchHour.date(from: "2026-10-10 14")!.addingTimeInterval(30 * 60)   // switch tracking: hourly counts, unordered pairs, 7 days
