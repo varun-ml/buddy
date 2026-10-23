@@ -183,6 +183,7 @@ struct BurrowCard: View {
             Text(t.text).font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundColor(done ? hex(0xb9a597) : bInk)
                 .strikethrough(done, color: hex(0xb9a597)).lineLimit(1)
             Spacer(minLength: 4)
+            if t.gid != nil { googleMark(bSub) }
             if hover == t.id && !done {
                 Button { withAnimation { m.notToday(t) } } label: {
                     Text("☾ tomorrow").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundColor(hex(0x6b4f8a))

@@ -149,7 +149,7 @@ struct GlassCard: View {
             }.buttonStyle(.plain)
             Text(t.text).font(.system(size: 13, weight: .medium)).foregroundColor(done ? gSub.opacity(0.67) : gInk).lineLimit(1)
             Spacer(minLength: 4)
-            Circle().fill(areaColor(t.area)).frame(width: 6, height: 6).help(t.area ?? "home")
+            if t.gid != nil { googleMark(gSub) } else { Circle().fill(areaColor(t.area)).frame(width: 6, height: 6).help(t.area ?? "home") }
             if hovered && !done {
                 Button { withAnimation { m.notToday(t) } } label: {
                     Text("Not today").font(.system(size: 11, weight: .semibold)).foregroundColor(gInk).padding(.horizontal, 8).padding(.vertical, 4).background(RoundedRectangle(cornerRadius: 7).fill(gFill.opacity(0.14)))

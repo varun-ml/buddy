@@ -250,6 +250,8 @@ struct PetView: View {
                 Divider()
                 Button("Tell Buddy…") { DispatchQueue.main.async { m.tellBuddy() } }
                 Button((m.trackingSwitches ? "✓ " : "") + "Track app switching") { m.toggleSwitchTracking() }
+                if m.googleSignedIn { Button("Sign out of Google Tasks") { m.signOutGoogle() } } else { Button("Connect Google Tasks…") { DispatchQueue.main.async { m.connectGoogle() } } }
+                if !m.googleSignedIn && m.googleHasClient { Button("Forget my Google client") { m.signOutGoogle() } }
                 Button(m.life == nil ? "Set up my profile…" : "Update my profile…") { DispatchQueue.main.async { onboard(m) } }
             }
             if config["phone"] as? Bool == true { Button("📱 Pair phone…") { pairPhone() } }

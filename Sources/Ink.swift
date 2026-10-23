@@ -146,6 +146,7 @@ struct InkCard: View {
             }.buttonStyle(.plain)
             Text(t.text).font(.system(size: 13)).foregroundColor(done ? kDim : kInk).strikethrough(done, color: kDim).lineLimit(1)
             Spacer(minLength: 4)
+            if t.gid != nil { googleMark(kSub) }
             if let a = t.area { HStack(spacing: 4) { Circle().fill(areaColor(a)).frame(width: 6, height: 6); Text(a) }.font(.system(size: 10.5, weight: .medium)).foregroundColor(kSub) }
             if hovered && !done {
                 Button { withAnimation { m.notToday(t) } } label: {

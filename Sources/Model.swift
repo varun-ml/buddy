@@ -28,6 +28,7 @@ final class Model: ObservableObject {
     var lastDiskNudge = Date.distantPast
     var life = loadLife()                       // ~/.config/buddy/life.json: your people, goals, stop time
     @Published var tasks = loadTasks()          // open "- [ ]" lines in ~/.config/buddy/tasks.md
+    @Published var google: [Todo] = []          // Google tasks due today, once you connect (Google.swift)
     @Published var tab = "work"                 // card tab: work | personal
     @Published var themeName = T.name
     /// Where Buddy strolls: "bottom" (along the bottom of the screen) or "side" (up and down the nearer side edge).
@@ -598,8 +599,9 @@ final class Model: ObservableObject {
         if workingSince == nil { workingSince = now }
         life = loadLife()   // edits to the files apply within 30 s, no restart
         let t = loadTasks(); if t != tasks { tasks = t }
+        googleTick(now)
         guard !snoozed, bubble == nil, !showCard, !micInUse() else { return }   // mic on = you're in a call
-        if lifeNudge(now) || relaxNudge(now) || switchNudge(now) { return }
+        if lifeNudge(now) || googleNudge(now) || relaxNudge(now) || switchNudge(now) { return }
 
         // break nudge: 90 min straight (buddy.json "breakMins"), then every 30 min until you take one
         if !relaxing, now.timeIntervalSince(workingSince!) >= Double(config["breakMins"] as? Int ?? 90) * 60, now.timeIntervalSince(lastBreakNudge) >= 30 * 60 {

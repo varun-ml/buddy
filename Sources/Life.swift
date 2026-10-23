@@ -74,11 +74,13 @@ func saveLife(_ l: Life) {
 struct Moment: Identifiable { var icon, who, when, detail: String; var id: String { detail + when }; var text: String { "\(who) · \(when.lowercased())" } }
 
 struct Todo: Identifiable, Equatable {
-    var id: String { line.isEmpty ? "auto:" + text : line }
+    var id: String { gid.map { "g:" + $0 } ?? (line.isEmpty ? "auto:" + text : line) }
     var text: String
     var area: String?        // home | work | career
     var due: Date?
     var line = ""            // the exact tasks.md line; empty for Buddy's own
+    var gid: String? = nil   // a Google task (Google.swift): its id and its list's id
+    var glist: String? = nil
 }
 func tokenValue(_ s: String, _ key: String) -> String? {
     guard let r = s.range(of: key + #":(\d{4}-\d{2}-\d{2}|\d{1,2} [A-Za-z]{3,9})"#, options: .regularExpression) else { return nil }
@@ -158,7 +160,7 @@ extension Model {
                 auto.append(Todo(text: text, area: "home", due: nearestDate(d)))
             }
         }
-        let all = tasks + auto
+        let all = tasks + auto + google
         return all.enumerated().sorted { a, b in
             switch (a.element.due, b.element.due) {
             case let (x?, y?): return x < y
@@ -170,6 +172,7 @@ extension Model {
     }
 
     func tick(_ t: Todo) {
+        if t.gid != nil { tickGoogle(t); return }
         if t.line.isEmpty {
             UserDefaults.standard.set(true, forKey: "bit.autodone.\(Calendar.current.component(.year, from: Date())).\(t.text)")
         } else if var text = try? String(contentsOfFile: tasksPath, encoding: .utf8), let r = text.range(of: t.line) {
@@ -181,6 +184,7 @@ extension Model {
 
     /// Hide it until tomorrow.
     func notToday(_ t: Todo) {
+        if t.gid != nil { snoozeGoogle(t); return }
         let tomorrow = isoDay.string(from: Date().addingTimeInterval(86400))
         if t.line.isEmpty {
             UserDefaults.standard.set(tomorrow, forKey: "bit.autosnooze.\(t.text)")

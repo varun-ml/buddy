@@ -120,6 +120,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(stickyLive("s:a", waiting: ["s:a"], red: [], done: []) && !stickyLive("pr:9", waiting: [], red: [], done: ["say:pr:9"]))
     // automated one-line PRs (gitlink bumps) and bots don't count on the leaderboard
     precondition(!countsPR(lines: 2, bot: false) && countsPR(lines: 3, bot: false) && !countsPR(lines: 500, bot: true))
+    googleSelftest()
     var w = Swing(); for _ in 0..<9 { w = swingStep(w, vx: 1000, dt: 1.0 / 30) }; precondition(w.angle > 5)   // drag right: the body lags behind, to the left
     for _ in 0..<300 { w = swingStep(w, vx: 5000, dt: 1.0 / 30) }; precondition(abs(w.angle) <= 40)            // a fast drag never swings it over the top
     for _ in 0..<150 { w = swingStep(w, vx: 0, dt: 1.0 / 30) }; precondition(abs(w.angle) < 1 && abs(w.speed) < 5)   // hold still: it settles
@@ -177,6 +178,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
     m.tasks = [Todo(text: "Book the dentist", area: "home", due: Calendar.current.startOfDay(for: Date()), line: "- [ ] a"),
                Todo(text: "Reply to the design review", area: "work", line: "- [ ] b"),
                Todo(text: "Update CV", area: "career", line: "- [ ] c")]
+    m.google = googleSamples()
     m.history = [Bubble(text: "“Waste no more time arguing what a good man should be. Be one.”", tone: .calm, kind: .quote, byline: "— Marcus Aurelius")]
     m.breedIndex = 0; m.cardWidth = 360
     m.notices = [Bubble(text: "onboarding is done in 4m. Tap to open ✨", tone: .happy), Bubble(text: "pricing-page wants your OK", tone: .waiting)]
