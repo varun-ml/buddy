@@ -37,6 +37,7 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
     precondition(Set(pets.map(\.name)).count == pets.count && pets.allSatisfy { !$0.coats.isEmpty && !$0.tricks.isEmpty })   // every pet: a unique name, coats, tricks
     precondition(ease(0) == 0 && ease(1) == 1 && ease(2) == 1 && costumeMotion(.heroLanding, 0.45).y < 0 && costumeMotion(.heroLanding, 2) == (0, 1, 0))   // the hero lands back on the floor
     let fd = { (d: String) in festival(on: isoDay.date(from: d)!) }   // a week before the festival days to the last of them
+    precondition(inSeason("durga", today: "durga") == "durga" && inSeason("durga", today: nil) == nil && inSeason("durga", today: "diwali") == nil && inSeason("hero", today: nil) == "hero" && inSeason(nil, today: "diwali") == nil)   // a picked festival outfit only in its season
     precondition(fd("2026-10-09") == nil && fd("2026-10-10") == "durga" && fd("2026-10-21") == "durga" && fd("2026-10-22") == nil)
     precondition(fd("2026-10-29") == nil && fd("2026-10-30") == "diwali" && fd("2026-11-11") == "diwali" && fd("2026-11-12") == nil)
     precondition(breath(0) == (0, true) && abs(breath(3.99).fill - 1) < 0.01 && !breath(5).inhaling && breath(9.99).fill < 0.01 && breath(10) == (0, true))   // 4 s in, 6 s out
