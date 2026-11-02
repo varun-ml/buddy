@@ -40,7 +40,7 @@ That's the whole install. Buddy builds on your Mac in about a minute and starts 
 
 The card always opens on Work; Personal is one click away.
 
-## Three looks
+## Four looks
 
 Right-click Buddy → **Look** → **Theme**.
 
@@ -48,6 +48,10 @@ Right-click Buddy → **Look** → **Theme**.
 |---|---|---|
 | Warm and playful. Your pet walks a little path as you make progress on the week's goal, and a plant grows a leaf for each step of the month. | A frosted macOS widget with big numbers and progress rings. | Dark and precise, for people who live in the terminal. |
 | <img src="docs/burrow.png" width="280"> | <img src="docs/glass.png" width="280"> | <img src="docs/ink.png" width="280"> |
+
+**Graphite** is Ink made easier to read on a dark terminal: a lighter card with a visible edge, grey text you can read at a glance, and a leaderboard with room for full names.
+
+<p align="center"><img src="docs/graphite.png" width="560" alt="Buddy's card in the Graphite theme: the Work tab with a gold, silver and bronze leaderboard, and the Personal tab"></p>
 
 ## Pick your buddy
 

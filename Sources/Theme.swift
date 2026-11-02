@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: card
 
 
-// MARK: themes: right-click → Theme. Burrow (warm, the pet's world), Glass (frosted macOS), Ink (dark, precise)
+// MARK: themes: right-click → Theme. Burrow (warm, the pet's world), Glass (frosted macOS), Ink (dark, precise), Graphite (Ink, legible on a dark desktop)
 
 func hex(_ v: Int) -> Color { Color(red: Double(v >> 16 & 255) / 255, green: Double(v >> 8 & 255) / 255, blue: Double(v & 255) / 255) }
 
@@ -23,6 +23,8 @@ let themes: [String: Theme] = [
                     solid: Color(red: 246 / 255, green: 246 / 255, blue: 250 / 255), design: .default, radius: 24, light: true),
     "ink":    Theme(name: "ink", fg: hex(0xededef), sub: hex(0x6b6b73), accent: hex(0x7c7ff2), solid: hex(0x0f0f11),
                     design: .default, radius: 12, light: false),
+    "graphite": Theme(name: "graphite", fg: hex(0xececf1), sub: hex(0x9d9da8), accent: hex(0x9396fa), solid: hex(0x18181c),
+                      design: .default, radius: 12, light: false),
 ]
 /// The current theme. A global because every card view reads it; Model.themeName republishes on change.
 var T = themes[UserDefaults.standard.string(forKey: "bit.theme") ?? (config["theme"] as? String ?? "ink")] ?? themes["ink"]!
@@ -127,6 +129,8 @@ struct ThemeSurface: View {
         switch T.name {
         case "glass": Frost().clipShape(shape).overlay(shape.fill(Color(red: 246 / 255, green: 246 / 255, blue: 250 / 255).opacity(0.58)))
         case "burrow": shape.fill(T.solid).shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        // a faint highlight along the top inside edge, so the card reads as a raised object on a black terminal
+        case "graphite": shape.fill(T.solid).overlay(shape.inset(by: 0.5).stroke(LinearGradient(colors: [Color.white.opacity(0.07), .clear], startPoint: .top, endPoint: UnitPoint(x: 0.5, y: 0.08)), lineWidth: 1))
         default: shape.fill(T.solid)
         }
     }
@@ -147,7 +151,7 @@ struct Chip: View {
     var action: () -> Void
     var body: some View {
         Button(action: action) {
-            Text(label).font(.system(size: 10.5, weight: .semibold, design: T.design)).foregroundColor(primary ? .white : T.fg)
+            Text(label).font(.system(size: 10.5, weight: .semibold, design: T.design)).foregroundColor(primary ? (T.name == "graphite" ? T.solid : .white) : T.fg)   // Graphite's light accent: dark text 6.7:1, white was 2.6:1
                 .padding(.horizontal, 9).padding(.vertical, 5)
                 .background(RoundedRectangle(cornerRadius: T.radius / 2).fill(primary ? T.accent : T.fg.opacity(0.08)))
         }.buttonStyle(.plain)
@@ -173,7 +177,7 @@ struct PRBlock: View {
             }
             // one plain line: what failed (the PR's title above says what it is; Open PR has the rest)
             Text(d?.why ?? (d == nil ? "reading the CI log…" : pr.failing.isEmpty ? "a check failed: Open PR shows which" : pr.failing.joined(separator: ", ") + " failed"))
-                .font(.system(size: 11, design: T.design)).foregroundColor(Color(red: 0.86, green: 0.36, blue: 0.36)).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                .font(.system(size: 11, design: T.design)).foregroundColor(T.name == "graphite" ? hex(0xf07878) : Color(red: 0.86, green: 0.36, blue: 0.36)).lineLimit(2).fixedSize(horizontal: false, vertical: true)   // Graphite's lighter card: 5.7:1 (the shared red was 4.3:1)
             if let s = d?.session {
                 Text("Last worked on in \(s.codex ? "Codex · " : "")\((s.cwd as NSString).lastPathComponent) · \(ago(Date().timeIntervalSince(s.when))) ago")
                     .font(.system(size: 9.5, design: T.design)).foregroundColor(T.sub).lineLimit(1)
@@ -203,7 +207,7 @@ struct Card: View {
         .overlay(alignment: m.cardOnLeft ? .leading : .trailing) { grip }   // the edge away from the pet
         .background(ThemeSurface(radius: T.radius))
         .clipShape(RoundedRectangle(cornerRadius: T.radius))
-        .overlay(RoundedRectangle(cornerRadius: T.radius).stroke(T.name == "ink" ? Color.white.opacity(0.08) : T.name == "glass" ? Color.white.opacity(0.55) : hex(0x784f28).opacity(0.12), lineWidth: T.name == "glass" ? 0.5 : 1))
+        .overlay(RoundedRectangle(cornerRadius: T.radius).stroke(!T.light ? K.edge : T.name == "glass" ? Color.white.opacity(0.55) : hex(0x784f28).opacity(0.12), lineWidth: T.name == "glass" ? 0.5 : 1))
     }
 
     var grip: some View {
@@ -268,7 +272,7 @@ struct Carousel: View {
         let items = m.history
         if let b = items.isEmpty ? nil : items[min(index, items.count - 1)] {
             let quote = b.kind == .quote
-            let (ink, sub, accent): (Color, Color, Color) = T.name == "burrow" ? (bInk, bSub, bClay) : T.name == "glass" ? (gInk, gSub, gBlue) : (kInk, kSub, kIndigo)
+            let (ink, sub, accent): (Color, Color, Color) = T.name == "burrow" ? (bInk, bSub, bClay) : T.name == "glass" ? (gInk, gSub, gBlue) : (K.ink, K.sub, K.accent)
             VStack(alignment: .leading, spacing: 7) {
                 Text(quote ? "“\(b.text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“” ")))”" : b.text)
                     .font(T.name == "burrow" ? .system(size: 13.5, weight: .semibold, design: .rounded)
@@ -284,14 +288,14 @@ struct Carousel: View {
                     icon("doc.on.doc", sub) { m.copyBubble(b) }
                     icon(m.favorites.contains(b.text) ? "heart.fill" : "heart", m.favorites.contains(b.text) ? hex(0xe0556b) : sub) { m.toggleFavorite(b) }
                 }
-                .font(T.name == "ink" ? .system(size: 11, design: .monospaced) : .system(size: 11.5, weight: .semibold, design: T.design)).lineLimit(1)
+                .font(!T.light ? .system(size: 11, design: .monospaced) : .system(size: 11.5, weight: .semibold, design: T.design)).lineLimit(1)
             }
             .padding(.horizontal, 14).padding(.vertical, 11)
             .background(Group {
                 switch T.name {
                 case "burrow": RoundedRectangle(cornerRadius: 18).fill(Color.white).shadow(color: bShadow.opacity(0.06), radius: 1, y: 2)
                 case "glass": RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.55))
-                default: RoundedRectangle(cornerRadius: 8).fill(hex(0x141418)).overlay(RoundedRectangle(cornerRadius: 8).stroke(hex(0x1f1f23), lineWidth: 1))
+                default: RoundedRectangle(cornerRadius: 8).fill(K.panel).overlay(RoundedRectangle(cornerRadius: 8).stroke(K.rule, lineWidth: 1))
                 }
             })
             .onHover { paused = $0 }
@@ -302,7 +306,7 @@ struct Carousel: View {
     func icon(_ name: String, _ c: Color, _ a: @escaping () -> Void) -> some View {
         Button(action: a) {
             Image(systemName: name).font(.system(size: 10, weight: .semibold)).foregroundColor(c).frame(width: 22, height: 22)
-                .background(Circle().fill(T.name == "burrow" ? bChip : T.name == "glass" ? gFill.opacity(0.14) : hex(0x1c1c21)))
+                .background(Circle().fill(T.name == "burrow" ? bChip : T.name == "glass" ? gFill.opacity(0.14) : K.chip))
         }.buttonStyle(.plain)
     }
 

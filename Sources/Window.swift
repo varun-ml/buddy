@@ -238,7 +238,7 @@ struct PetView: View {
                     }
                 }
                 Menu("Theme") {
-                    ForEach(["burrow", "glass", "ink"], id: \.self) { n in
+                    ForEach(["burrow", "glass", "ink", "graphite"], id: \.self) { n in
                         Button((m.themeName == n ? "✓ " : "    ") + n.capitalized) { m.setTheme(n) }
                     }
                 }

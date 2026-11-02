@@ -11,7 +11,7 @@ Thanks for helping! Buddy is small on purpose: a handful of Swift files, one Pyt
 | `Sources/PetCat.swift`, `PetPug.swift`, `PetBear.swift` | One pet each: coats, tricks, head, tail and ears |
 | `Sources/Agents.swift` | One entry per coding agent: colours, badge, how to open its session |
 | `Sources/Theme.swift` | Theme colours, the card frame, and parts every theme shares (quote carousel, rings) |
-| `Sources/Burrow.swift`, `Glass.swift`, `Ink.swift` | One card per theme |
+| `Sources/Burrow.swift`, `Glass.swift`, `Ink.swift` | One card per theme; `Ink.swift` draws both Ink and Graphite, each from its own palette |
 | `Sources/Window.swift` | The floating window, bubbles, and walking along the screen |
 | `Sources/Carry.swift` | Pick Buddy up with the mouse: the swing while held, the fall, the landing (each pet's words live in its `PetKind`) |
 | `Sources/Life.swift` | The Personal tab: profile, goals, to-dos and their nudges |
@@ -61,7 +61,7 @@ Costumes are drawn over any pet (`Sources/Costume.swift`): the caped hero is the
 
 ### Also welcome
 
-- **A theme.** Each theme is one card view (`BurrowCard`, `GlassCard`, `InkCard`); the data they show is shaped once in `Theme.swift`.
+- **A theme.** Each theme is one card view (`BurrowCard`, `GlassCard`, `InkCard`); the data they show is shaped once in `Theme.swift`. A dark variant of Ink can be just a new `InkPalette`, the way Graphite is.
 - **Quotes** in `wisdom.json`.
 
 ## Rules of the road

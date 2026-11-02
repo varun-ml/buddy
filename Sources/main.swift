@@ -185,7 +185,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
     m.notices = [Bubble(text: "onboarding is done in 4m. Tap to open ✨", tone: .happy), Bubble(text: "pricing-page wants your OK", tone: .waiting)]
     m.noticesSeenAt = .distantPast
     try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
-    MainActor.assumeIsolated { for th in ["burrow", "glass", "ink"] { for tab in ["work", "personal"] {
+    MainActor.assumeIsolated { for th in ["burrow", "glass", "ink", "graphite"] { for tab in ["work", "personal"] {
         T = themes[th]!; m.themeName = th; m.tab = tab
         let r = ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true).environment(\.colorScheme, .light))
         r.scale = 2
@@ -201,7 +201,7 @@ if let i = CommandLine.arguments.firstIndex(of: "--snapshot"), i + 1 < CommandLi
         let base = m.sessions
         let crowd = (0..<25).map { i in Session(id: "done\(i)", cwd: "/x/r\(i % 10)", repo: "repo-\(i % 10)", branch: "main", state: "finished", activity: "", prompt: "p", ts: now - Double(600 + i * 60), source: i % 10 < 3 ? "codex-cli" : nil) }
         m.tab = "work"
-        for th in ["burrow", "glass", "ink"] {
+        for th in ["burrow", "glass", "ink", "graphite"] {
             T = themes[th]!; m.themeName = th
             @MainActor func height() -> CGFloat { ImageRenderer(content: Card(m: m).fixedSize(horizontal: false, vertical: true)).nsImage?.size.height ?? 0 }
             m.sessions = base; let h0 = height()
