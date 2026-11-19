@@ -233,7 +233,7 @@ struct PetView: View {
                     }
                 }
                 Menu("Walk") {
-                    ForEach([("bottom", "Along the bottom"), ("side", "Up and down the side")], id: \.0) { w in
+                    ForEach([("bottom", "Along the bottom"), ("side", "Up and down the side"), ("corner", "Out of the way")], id: \.0) { w in
                         Button((m.walk == w.0 ? "✓ " : "    ") + w.1) { m.setWalk(w.0) }
                     }
                 }
@@ -462,6 +462,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setFrame(f, display: true, animate: true)
     }
 
+    /// Where you are working, as x spans along Buddy's strip: the frontmost window, if it reaches down to Buddy's height
+    /// (its bottom is where you type), and 150 pt either side of the cursor.
+    func busySpans(near f: NSRect) -> [ClosedRange<CGFloat>] {
+        let mouse = NSEvent.mouseLocation
+        var spans = [(mouse.x - 150)...(mouse.x + 150)]
+        if let app = NSWorkspace.shared.frontmostApplication, app.bundleIdentifier != Bundle.main.bundleIdentifier,
+           let screenH = NSScreen.screens.first?.frame.height,
+           let wins = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]],
+           let win = wins.first(where: { ($0[kCGWindowOwnerPID as String] as? Int32) == app.processIdentifier && ($0[kCGWindowLayer as String] as? Int) == 0 }),
+           let b = win[kCGWindowBounds as String] as? [String: CGFloat], let x = b["X"], let y = b["Y"], let w = b["Width"], let h = b["Height"],
+           screenH - (y + h) < f.maxY && screenH - y > f.minY, w > 0 {   // Cocoa y: the window covers Buddy's height
+            spans.append(x...(x + w))
+        }
+        return spans
+    }
+
+    func awayTarget(from f: NSRect, roll: CGFloat, busy: [ClosedRange<CGFloat>]? = nil) -> CGFloat {
+        awaySpot(from: f, busy: busy ?? busySpans(near: f), cursorX: NSEvent.mouseLocation.x, in: screen, size: small, roll: roll)
+    }
+
     var tick = 0
     var denShownAt: Date?   // when Buddy said where it was going, so the line shows a moment before it leaves
 
@@ -509,7 +529,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             if target == nil || abs((target ?? 0) - f.minX) < 8 {
-                target = f.midX < screen.midX ? screen.maxX - small.width - 10 : screen.minX + 10
+                let (lo, hi) = bottomRange(corner: m.walk == "corner", from: f, in: screen, size: small)
+                target = f.minX < (lo + hi) / 2 ? hi : lo
             }
             let dx = target! - f.minX
             if !m.walking { m.walking = true }
@@ -537,7 +558,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         if target == nil {
-            target = CGFloat.random(in: (screen.minX + 10)...(screen.maxX - small.width - 10))
+            target = m.walk == "corner" ? awayTarget(from: f, roll: .random(in: 0...1))
+                : strollTarget(side: false, from: f, in: screen, size: small, roll: .random(in: 0...1)).x
+        }
+        // out of the way: the moment you switch windows or bring the cursor near, the spot it walks to (or stands on) is re-picked
+        if m.walk == "corner" && tick % 8 == 0, let t = target {
+            let busy = busySpans(near: f)
+            let hit = { (b: ClosedRange<CGFloat>) in b.overlaps(t...(t + self.small.width)) || b.overlaps(f.minX...f.maxX) }
+            let next = awayTarget(from: f, roll: .random(in: 0...1), busy: busy)
+            let nextFree = !busy.contains { $0.overlaps(next...(next + small.width)) }
+            // move off only to somewhere free, or away from the cursor (busy[0]); under a maximized window it would jitter otherwise
+            if (nextFree && busy.contains(where: hit)) || hit(busy[0]) { target = next }
         }
         guard let t = target else { return }
         let dx = t - f.minX
@@ -606,10 +637,37 @@ func sideRange(in s: NSRect, size: NSSize) -> (low: CGFloat, high: CGFloat) {
     return (low, max(low, s.maxY - size.height - 360))
 }
 
+/// The x range Buddy walks along the bottom: the whole width, or in the corner only the 220 pt nearest the nearer side edge.
+func bottomRange(corner: Bool, from f: NSRect, in s: NSRect, size: NSSize) -> (lo: CGFloat, hi: CGFloat) {
+    let lo = s.minX + 10, hi = s.maxX - size.width - 10
+    guard corner else { return (lo, hi) }
+    let band = min(220, hi - lo)
+    return f.midX < s.midX ? (lo, lo + band) : (hi - band, hi)
+}
+
+/// "Out of the way": the next x to walk to, `roll` in 0…1. The strip along the bottom minus `busy` (where you work) leaves gaps;
+/// it walks in the widest gap that fits it, nearer a screen edge on a tie. No gap: the corner farther from the cursor. Selftested.
+func awaySpot(from f: NSRect, busy: [ClosedRange<CGFloat>], cursorX: CGFloat, in s: NSRect, size: NSSize, roll: CGFloat) -> CGFloat {
+    let (lo, hi) = bottomRange(corner: false, from: f, in: s, size: size)
+    var gaps = [(lo, hi + size.width)]   // spans the pet's whole body may occupy
+    for b in busy {
+        gaps = gaps.flatMap { g -> [(CGFloat, CGFloat)] in
+            guard b.upperBound > g.0 && b.lowerBound < g.1 else { return [g] }
+            return [(g.0, b.lowerBound), (b.upperBound, g.1)].filter { $0.1 - $0.0 >= size.width }
+        }
+    }
+    let edge = { (g: (CGFloat, CGFloat)) in min(g.0 - lo, hi + size.width - g.1) }
+    guard let g = gaps.max(by: { ($0.1 - $0.0, -edge($0)) < ($1.1 - $1.0, -edge($1)) }) else {
+        let far = bottomRange(corner: true, from: NSRect(x: cursorX < s.midX ? s.maxX - size.width : s.minX, y: f.minY, width: size.width, height: size.height), in: s, size: size)
+        return far.lo + roll * (far.hi - far.lo)
+    }
+    return g.0 + roll * (g.1 - size.width - g.0)
+}
+
 /// Where to stroll next, `roll` in 0…1. Along the bottom: anywhere across, at the current height.
 /// Up and down the side: on the nearer side edge, anywhere in `sideRange`. Selftested.
-func strollTarget(side: Bool, from f: NSRect, in s: NSRect, size: NSSize, roll: CGFloat) -> CGPoint {
-    guard side else { return CGPoint(x: s.minX + 10 + roll * (s.width - size.width - 20), y: f.minY) }
+func strollTarget(side: Bool, corner: Bool = false, from f: NSRect, in s: NSRect, size: NSSize, roll: CGFloat) -> CGPoint {
+    guard side else { let (lo, hi) = bottomRange(corner: corner, from: f, in: s, size: size); return CGPoint(x: lo + roll * (hi - lo), y: f.minY) }
     let (low, high) = sideRange(in: s, size: size)
     return CGPoint(x: f.midX < s.midX ? s.minX + 10 : s.maxX - size.width - 10, y: low + roll * (high - low))
 }
