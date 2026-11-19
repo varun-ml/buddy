@@ -99,6 +99,16 @@ if CommandLine.arguments.contains("--selftest") {   // the date and time parsing
             precondition(r.x == scr.maxX - sz.width - 10 && l.x == scr.minX + 10)
             precondition(r.y >= scr.minY + 10 && r.y + sz.height + 360 <= scr.maxY)
         }
+        // "walk": "corner" (Out of the way): never inside a busy span; no room left → the corner away from the cursor
+        let f0 = NSRect(x: 700, y: 40, width: 100, height: 108)
+        for roll: CGFloat in [0, 0.5, 1] {
+            let x = awaySpot(from: f0, busy: [400...1200], cursorX: 800, in: scr, size: sz, roll: roll)   // a window in the middle
+            precondition((x + sz.width <= 400 || x >= 1200) && x >= scr.minX + 10 && x <= scr.maxX - sz.width - 10, "away \(x)")
+            let c = awaySpot(from: f0, busy: [0...1440], cursorX: 200, in: scr, size: sz, roll: roll)       // a full-width window, cursor on the left
+            precondition(c >= scr.maxX - sz.width - 230, "corner \(c)")
+            let w = awaySpot(from: f0, busy: [0...900, 1000...1100], cursorX: 50, in: scr, size: sz, roll: roll)   // the widest gap wins
+            precondition(w >= 1100 && w + sz.width <= scr.maxX - 10 + 0.01, "gap \(w)")
+        }
         // the open card: above the pet when it fits, else beside it; on screen, never over the pet, the pet never moves
         // (card height, card width, pet x): fits above, too tall on either edge, taller than the screen, and too wide for the near side
         for (card, width, x) in [(500.0, 360.0, 1300.0), (800, 360, 1300), (800, 360, 20), (2000, 360, 1300), (800, 900, 700)] as [(CGFloat, CGFloat, CGFloat)] {

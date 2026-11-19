@@ -31,7 +31,8 @@ final class Model: ObservableObject {
     @Published var google: [Todo] = []          // Google tasks due today, once you connect (Google.swift)
     @Published var tab = "work"                 // card tab: work | personal
     @Published var themeName = T.name
-    /// Where Buddy strolls: "bottom" (along the bottom of the screen) or "side" (up and down the nearer side edge).
+    /// Where Buddy strolls: "bottom" (along the bottom of the screen), "side" (up and down the nearer side edge)
+    /// or "corner" (Out of the way: along the bottom, away from the front window and the cursor).
     /// Right-click → Look → Walk, or buddy.json "walk": "side". The menu's choice wins.
     @Published var walk = UserDefaults.standard.string(forKey: "bit.walk") ?? config["walk"] as? String ?? "bottom"
     @Published var bubble: Bubble?
